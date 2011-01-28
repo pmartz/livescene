@@ -5,7 +5,8 @@
 #   FREENECT_LIBRARY
 #   FREENECT_SYNC_LIBRARY
 #   LIBFREENECT_LIBRARIES
-#   LIBFREENECT_INCLUDE_DIR
+#   FREENECT_INCLUDE_DIR
+#   FREENECT_SYNC_INCLUDE_DIR
 #   LIBFREENECT_INCLUDE_DIRS
 #
 # This script will look in standard locations for installed libfreenect. However, if you
@@ -29,26 +30,32 @@ set( _libfreenectSearchPaths
     /Library/Frameworks
 )
 
-find_path( LIBFREENECT_INCLUDE_DIR
-    libfreenect.h
-    HINTS
-        ${LIBFREENECT_ROOT}
-        $ENV{LIBFREENECT_ROOT}
-        ${LIBFREENECT_SOURCE_DIR}
-        $ENV{LIBFREENECT_SOURCE_DIR}
-    PATH_SUFFIXES
-        include
-    PATHS
-        ${_libfreenectSearchPaths}
-)
+macro( FIND_LIBFREENECT_HEADER MYHEADER MYHEADERNAME )
+    mark_as_advanced( ${MYHEADER} )
+    find_path( ${MYHEADER}
+        ${MYHEADERNAME}
+        HINTS
+            ${LIBFREENECT_ROOT}
+            $ENV{LIBFREENECT_ROOT}
+            ${LIBFREENECT_SOURCE_DIR}
+            $ENV{LIBFREENECT_SOURCE_DIR}
+        PATH_SUFFIXES
+            include
+            wrappers/c_sync
+        PATHS
+            ${_libfreenectSearchPaths}
+    )
+    if( ${MYHEADER} )
+        list( APPEND LIBFREENECT_INCLUDE_DIRS
+            ${${MYHEADER}}
+        )
+    endif()
+endmacro()
 
 unset( LIBFREENECT_INCLUDE_DIRS )
-list( APPEND LIBFREENECT_INCLUDE_DIRS
-    ${LIBFREENECT_INCLUDE_DIR}
-)
-mark_as_advanced( LIBFREENECT_INCLUDE_DIR )
-mark_as_advanced( LIBFREENECT_INCLUDE_DIRS )
-# message( STATUS ${LIBFREENECT_INCLUDE_DIR} )
+FIND_LIBFREENECT_HEADER( FREENECT_INCLUDE_DIR libfreenect.h )
+FIND_LIBFREENECT_HEADER( FREENECT_SYNC_INCLUDE_DIR libfreenect_sync.h )
+# message( STATUS ${LIBFREENECT_INCLUDE_DIRS} )
 
 
 
@@ -112,5 +119,5 @@ find_package_handle_standard_args(
     libfreenect
     DEFAULT_MSG 
     LIBFREENECT_LIBRARIES 
-    LIBFREENECT_INCLUDE_DIR
+    LIBFREENECT_INCLUDE_DIRS
 )

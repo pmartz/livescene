@@ -1,6 +1,7 @@
 // Copyright 2011 Skew Matrix Software and Alpha Pixel
 
 #include <libfreenect.h>
+#include <libfreenect_sync.h>
 
 #include <liblivescene/Version.h>
 #include <iostream>
