@@ -23,7 +23,13 @@ MACRO( ADD_OSGPLUGIN TRGTNAME )
     )
     target_link_libraries( ${TRGTNAME}
         ${OSG_LIBRARIES}
+        ${LIBFREENECT_LIBRARIES}
     )
+    if( OSGWORKS_FOUND )
+        target_link_libraries( ${TRGTNAME}
+            ${OSGWORKS_LIBRARIES}
+        )
+    endif()
 
     IF( WIN32 )
         SET_TARGET_PROPERTIES( ${TRGTNAME} PROPERTIES DEBUG_POSTFIX d )
@@ -42,7 +48,13 @@ MACRO( MAKE_EXECUTABLE EXENAME )
     )
     TARGET_LINK_LIBRARIES( ${EXENAME}
         ${OSG_LIBRARIES}
+        ${LIBFREENECT_LIBRARIES}
     )
+    if( OSGWORKS_FOUND )
+        target_link_libraries( ${EXENAME}
+            ${OSGWORKS_LIBRARIES}
+        )
+    endif()
     # Requires ${CATAGORY}
     SET_TARGET_PROPERTIES( ${EXENAME} PROPERTIES PROJECT_LABEL "${CATEGORY} ${EXENAME}" )
 ENDMACRO( MAKE_EXECUTABLE EXENAME )

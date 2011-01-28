@@ -26,12 +26,18 @@ endif()
 include( CMakeMacros )
 
 include( FindOSGHelper )
+find_package( OSGWorks )
+find_package( libfreenect REQUIRED )
 
+if( OSGWORKS_FOUND )
+    add_definitions( -DOSGWORKS_FOUND )
+endif()
 
-# Add OSG for entire project for include & lib paths
 include_directories( 
     ${PROJECT_SOURCE_DIR}/include
+    ${OSGWORKS_INCLUDE_DIRS}
     ${OSG_INCLUDE_DIRS}
+    ${LIBFREENECT_INCLUDE_DIRS}
 )
 # HACK: Not sure why this is necessary, but linker can't find library without it.
 if( WIN32 AND MSVC )
@@ -39,7 +45,6 @@ if( WIN32 AND MSVC )
         ${EXECUTABLE_OUTPUT_PATH}/Debug
     )
 endif()
-
 
 option( BUILD_SHARED_LIBS "Set to ON to build livescene for dynamic linking. Use OFF for static." ON )
 if( NOT BUILD_SHARED_LIBS )
