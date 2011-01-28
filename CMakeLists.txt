@@ -15,11 +15,11 @@ MAKE_DIRECTORY( ${EXECUTABLE_OUTPUT_PATH} )
 MARK_AS_ADVANCED( EXECUTABLE_OUTPUT_PATH )
 
 if( WIN32 AND MSVC )
-    OPTION( OSGWORKS_WIN32_USE_MP "Build with multiple processes (/MP option; VS 2005 and above)." ON )
-    MARK_AS_ADVANCED( OSGWORKS_WIN32_USE_MP )
-    IF( OSGWORKS_WIN32_USE_MP )
+    OPTION( LIVESCENE_WIN32_USE_MP "Build with multiple processes (/MP option; VS 2005 and above)." ON )
+    MARK_AS_ADVANCED( LIVESCENE_WIN32_USE_MP )
+    IF( LIVESCENE_WIN32_USE_MP )
         SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP" )
-    ENDIF( OSGWORKS_WIN32_USE_MP )
+    ENDIF( LIVESCENE_WIN32_USE_MP )
 endif()
 
 
@@ -33,7 +33,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/include
     ${OSG_INCLUDE_DIRS}
 )
-# HACK: Not sure why this is necessary, but linker can't find osgwToolsd.lib without it.
+# HACK: Not sure why this is necessary, but linker can't find library without it.
 if( WIN32 AND MSVC )
     LINK_DIRECTORIES(
         ${EXECUTABLE_OUTPUT_PATH}/Debug
