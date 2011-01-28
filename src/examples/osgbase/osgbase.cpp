@@ -11,6 +11,7 @@
 #endif
 
 #include <osgViewer/Viewer>
+#include <osgViewer/ViewerEventHandlers>
 #include <osgDB/ReadFile>
 #include <osgGA/TrackballManipulator>
 #include <osg/Texture2D>
@@ -44,13 +45,16 @@ int main()
 #endif
 
     osg::ref_ptr< osg::Image > image = new osg::Image;
+    image->setDataVariance( osg::Object::DYNAMIC );
 
     osg::ref_ptr< osg::Texture2D > tex = new osg::Texture2D;
+    tex->setDataVariance( osg::Object::DYNAMIC );
     tex->setResizeNonPowerOfTwoHint( false );
     tex->setTextureSize( FREENECT_FRAME_W, FREENECT_FRAME_H );
     tex->setImage( image.get() );
 
     osgViewer::Viewer viewer;
+    viewer.addEventHandler( new osgViewer::StatsHandler() );
     viewer.setThreadingModel( osgViewer::ViewerBase::SingleThreaded );
     viewer.setUpViewInWindow( 30, 30, 800, 600 );
     viewer.setSceneData( createScene( tex.get() ) );
@@ -60,15 +64,17 @@ int main()
 
     while( !viewer.done() )
     {
-        uint32_t timestamp = viewer.getFrameStamp()->getFrameNumber();
-        unsigned char* buffer;
-        freenect_sync_get_video( (void**)&buffer, &timestamp, 0, FREENECT_VIDEO_RGB );
+        uint32_t ts;
+        unsigned char* buffer( NULL );
+        freenect_sync_get_video( (void**)&buffer, &ts, 0, FREENECT_VIDEO_RGB );
 
         image->setImage( FREENECT_FRAME_W, FREENECT_FRAME_H, 0, GL_RGB,
-            GL_RGB, GL_UNSIGNED_BYTE, buffer, osg::Image::USE_NEW_DELETE );
+            GL_RGB, GL_UNSIGNED_BYTE, buffer, osg::Image::NO_DELETE );
 
         viewer.frame();
     }
+
+    freenect_sync_stop();
 
     return( 0 );
 }

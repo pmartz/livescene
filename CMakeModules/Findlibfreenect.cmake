@@ -80,7 +80,7 @@ macro( FIND_LIBFREENECT_LIBRARY MYLIBRARY MYLIBRARYNAME )
     )
     find_library( ${MYLIBRARY}_debug
         NAMES
-            ${MYLIBRARYNAME}d
+            ${MYLIBRARYNAME}
         HINTS
             ${LIBFREENECT_ROOT}
             $ENV{LIBFREENECT_ROOT}
