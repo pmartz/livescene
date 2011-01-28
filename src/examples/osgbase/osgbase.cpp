@@ -18,12 +18,13 @@
 
 osg::Node* createScene( osg::Texture2D* tex )
 {
-#ifdef OSGWORKS_FOUND
     osg::ref_ptr< osg::Geode > geode = new osg::Geode;
+#ifdef OSGWORKS_FOUND
     geode->addDrawable( osgwTools::makePlane( osg::Vec3( -1., 0., -1. ),
         osg::Vec3( 2., 0., 0. ), osg::Vec3( 0., 0., 2. ) ) );
 #else
-    osg::ref_ptr< osg::Node > geode = osgDB::readNodeFile( "cow.osg" );
+    geode->addDrawable( osg::createTexturedQuadGeometry( osg::Vec3( -1., 0., -1. ),
+        osg::Vec3( 2., 0., 0. ), osg::Vec3( 0., 0., 2. ) ) );
 #endif
 
     osg::StateSet* stateSet = geode->getOrCreateStateSet();
