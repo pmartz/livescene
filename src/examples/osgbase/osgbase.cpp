@@ -46,6 +46,7 @@ int main()
     osg::ref_ptr< osg::Image > image = new osg::Image;
 
     osg::ref_ptr< osg::Texture2D > tex = new osg::Texture2D;
+    tex->setResizeNonPowerOfTwoHint( false );
     tex->setTextureSize( FREENECT_FRAME_W, FREENECT_FRAME_H );
     tex->setImage( image.get() );
 

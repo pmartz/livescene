@@ -28,6 +28,10 @@ include( CMakeMacros )
 include( FindOSGHelper )
 find_package( OSGWorks )
 find_package( libfreenect REQUIRED )
+find_package( libusb-1.0 REQUIRED )
+
+set( THREADS_USE_PTHREADS_WIN32 true )
+find_package( Threads REQUIRED )
 
 if( OSGWORKS_FOUND )
     add_definitions( -DOSGWORKS_FOUND )
@@ -38,6 +42,8 @@ include_directories(
     ${OSGWORKS_INCLUDE_DIRS}
     ${OSG_INCLUDE_DIRS}
     ${LIBFREENECT_INCLUDE_DIRS}
+    ${LIBUSB_1_INCLUDE_DIRS}
+    ${THREADS_PTHREADS_INCLUDE_DIR}
 )
 # HACK: Not sure why this is necessary, but linker can't find library without it.
 if( WIN32 AND MSVC )

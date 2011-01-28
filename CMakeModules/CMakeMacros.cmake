@@ -21,15 +21,17 @@ MACRO( ADD_OSGPLUGIN TRGTNAME )
     link_internal( ${TRGTNAME}
         liblivescene
     )
-    target_link_libraries( ${TRGTNAME}
-        ${OSG_LIBRARIES}
-        ${LIBFREENECT_LIBRARIES}
-    )
     if( OSGWORKS_FOUND )
         target_link_libraries( ${TRGTNAME}
             ${OSGWORKS_LIBRARIES}
         )
     endif()
+    target_link_libraries( ${TRGTNAME}
+        ${OSG_LIBRARIES}
+        ${LIBFREENECT_LIBRARIES}
+        ${LIBUSB_1_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT}
+    )
 
     IF( WIN32 )
         SET_TARGET_PROPERTIES( ${TRGTNAME} PROPERTIES DEBUG_POSTFIX d )
@@ -46,15 +48,17 @@ MACRO( MAKE_EXECUTABLE EXENAME )
     LINK_INTERNAL( ${EXENAME}
         liblivescene
     )
-    TARGET_LINK_LIBRARIES( ${EXENAME}
-        ${OSG_LIBRARIES}
-        ${LIBFREENECT_LIBRARIES}
-    )
     if( OSGWORKS_FOUND )
         target_link_libraries( ${EXENAME}
             ${OSGWORKS_LIBRARIES}
         )
     endif()
+    TARGET_LINK_LIBRARIES( ${EXENAME}
+        ${OSG_LIBRARIES}
+        ${LIBFREENECT_LIBRARIES}
+        ${LIBUSB_1_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT}
+    )
     # Requires ${CATAGORY}
     SET_TARGET_PROPERTIES( ${EXENAME} PROPERTIES PROJECT_LABEL "${CATEGORY} ${EXENAME}" )
 ENDMACRO( MAKE_EXECUTABLE EXENAME )
