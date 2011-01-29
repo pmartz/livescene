@@ -1,4 +1,4 @@
-// Copyright 2011 Skew Matrix Software and Alpha Pixel
+// Copyright 2011 Skew Matrix Software and AlphaPixel
 
 #ifndef __LIVESCENE_VERSION_H__
 #define __LIVESCENE_VERSION_H__ 1

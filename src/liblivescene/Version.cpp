@@ -1,4 +1,4 @@
-// Copyright 2011 Skew Matrix Software and Alpha Pixel
+// Copyright 2011 Skew Matrix Software and AlphaPixel
 
 #include "liblivescene/Version.h"
 #include <string>
