@@ -46,11 +46,18 @@ void characteristics( unsigned short* buf )
     unsigned short maxVal( 0 );
     osg::Vec2s minLoc, maxLoc;
 
+    // TBD ignore rightmost 8 columns, they are always max distance.
     unsigned short sdx, tdx;
     for( tdx=0; tdx<FREENECT_FRAME_H; tdx++ )
     {
         for( sdx=0; sdx<FREENECT_FRAME_W; sdx++ )
         {
+            if( sdx > FREENECT_FRAME_W-8 )
+            {
+                // rightmost 8 columns are always max depth. Ignore them.
+                ptr++;
+                continue;
+            }
             if( *ptr > maxVal )
             {
                 maxVal = *ptr;
