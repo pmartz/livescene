@@ -8,6 +8,8 @@
 #ifdef OSGWORKS_FOUND
 #  include <osgwTools/Shapes.h>
 #  include <osgwTools/Version.h>
+#else
+#  include <osg/Geometry>
 #endif
 
 #include <osgViewer/Viewer>

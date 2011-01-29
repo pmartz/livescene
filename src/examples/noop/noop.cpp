@@ -13,10 +13,13 @@
 
 int main()
 {
-    std::cout << livescene::getVersionString() << std::endl;
+    std::cout << "livescene version string: " << livescene::getVersionString() << std::endl;
 
+    std::cout << "osgWorks version string: ";
 #ifdef OSGWORKS_FOUND
     std::cout << osgwTools::getVersionString() << std::endl;
+#else
+    std::cout << "UNAVAILABLE" << std::endl;
 #endif
 
     return( 0 );
