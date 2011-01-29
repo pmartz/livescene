@@ -113,7 +113,7 @@ int main()
         uint32_t ts;
         unsigned short* buffer( NULL );
         freenect_sync_get_depth( (void**)&buffer, &ts, 0, FREENECT_DEPTH_10BIT );
-        //characteristics( buffer );
+        characteristics( buffer );
         scale( buffer );
 
         image->setImage( FREENECT_FRAME_W, FREENECT_FRAME_H, 0, GL_INTENSITY16,
