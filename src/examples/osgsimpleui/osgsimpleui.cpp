@@ -21,6 +21,7 @@
 #include <osg/Texture2D>
 #include <osg/Geometry>
 #include <osg/MatrixTransform>
+#include <osgText/Text>
 
 osg::Node* createScene( osg::Texture2D* tex )
 {
@@ -71,19 +72,16 @@ osg::Node* createScene( osg::Texture2D* tex )
     return( geode.release() );
 }
 
-osg::Node* square()
+osg::Node* hudElement()
 {
     osg::ref_ptr< osg::Geode > geode = new osg::Geode;
-    osg::Geometry* geom = new osg::Geometry;
-    double extent( 10. );
-#ifdef OSGWORKS_FOUND
-    geom = osgwTools::makePlane( osg::Vec3( -extent, -extent, 0. ),
-        osg::Vec3( 2.*extent, 0., 0. ), osg::Vec3( 0., 2.*extent, 0. ) );
-#else
-    geom = osg::createTexturedQuadGeometry( osg::Vec3( -extent, -extent., 0. ),
-        osg::Vec3( 2.*extent, 0., 0. ), osg::Vec3( 0., 2.*extent, 0. ) );
-#endif
-    geode->addDrawable( geom );
+
+    osg::ref_ptr< osgText::Text > text = new osgText::Text;
+    text->setText( "OSG HUD\ninteraction" );
+    text->setCharacterSize( 50. );
+    text->setFont( "arial.ttf" );
+    text->setAlignment( osgText::TextBase::CENTER_CENTER );
+    geode->addDrawable( text.get() );
 
     osg::StateSet* stateSet = geode->getOrCreateStateSet();
     stateSet->setRenderBinDetails( 1, "RenderBin" );
@@ -180,7 +178,7 @@ int main()
     viewer.setSceneData( root.get() );
 
     osg::ref_ptr< osg::MatrixTransform > mt = new osg::MatrixTransform;
-    mt->addChild( square() );
+    mt->addChild( hudElement() );
     root->addChild( mt.get() );
 
     while( !viewer.done() )
