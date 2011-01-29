@@ -1,4 +1,4 @@
-// Copyright 2011 Skew Matrix Software and Alpha Pixel
+// Copyright 2011 Skew Matrix Software and AlphaPixel
 
 #include <libfreenect_sync.h>
 
@@ -68,10 +68,10 @@ int main()
     {
         uint32_t ts;
         unsigned char* buffer( NULL );
-        freenect_sync_get_video( (void**)&buffer, &ts, 0, FREENECT_VIDEO_RGB );
+        freenect_sync_get_depth( (void**)&buffer, &ts, 0, FREENECT_DEPTH_11BIT );
 
-        image->setImage( FREENECT_FRAME_W, FREENECT_FRAME_H, 0, GL_RGB,
-            GL_RGB, GL_UNSIGNED_BYTE, buffer, osg::Image::NO_DELETE );
+        image->setImage( FREENECT_FRAME_W, FREENECT_FRAME_H, 0, GL_INTENSITY,
+            GL_INTENSITY, GL_UNSIGNED_SHORT, buffer, osg::Image::NO_DELETE );
 
         viewer.frame();
     }
