@@ -17,6 +17,7 @@
 #include <osgDB/ReadFile>
 #include <osgGA/TrackballManipulator>
 #include <osg/Texture2D>
+#include <osg/io_utils>
 
 
 osg::Node* createScene( osg::Texture2D* tex )
@@ -37,6 +38,49 @@ osg::Node* createScene( osg::Texture2D* tex )
     return( geode.release() );
 }
 
+
+void characteristics( unsigned short* buf )
+{
+    unsigned short* ptr = buf;
+    unsigned short minVal( 0xffff );
+    unsigned short maxVal( 0 );
+    osg::Vec2s minLoc, maxLoc;
+
+    unsigned short sdx, tdx;
+    for( tdx=0; tdx<FREENECT_FRAME_H; tdx++ )
+    {
+        for( sdx=0; sdx<FREENECT_FRAME_W; sdx++ )
+        {
+            if( *ptr > maxVal )
+            {
+                maxVal = *ptr;
+                maxLoc.set( sdx, tdx );
+            }
+            if( *ptr < minVal )
+            {
+                minVal = *ptr;
+                minLoc.set( sdx, tdx );
+            }
+            ptr++;
+        }
+    }
+    std::cout << "Max depth value: " << maxVal << " at " << maxLoc << std::endl;
+    std::cout << "  Min depth value: " << minVal << " at " << minLoc << std::endl;
+}
+void scale( unsigned short* buf )
+{
+    unsigned short* ptr = buf;
+
+    unsigned short sdx, tdx;
+    for( tdx=0; tdx<FREENECT_FRAME_H; tdx++ )
+    {
+        for( sdx=0; sdx<FREENECT_FRAME_W; sdx++ )
+        {
+            *ptr <<= 6;
+            ptr++;
+        }
+    }
+}
 
 int main()
 {
@@ -67,11 +111,13 @@ int main()
     while( !viewer.done() )
     {
         uint32_t ts;
-        unsigned char* buffer( NULL );
-        freenect_sync_get_depth( (void**)&buffer, &ts, 0, FREENECT_DEPTH_11BIT );
+        unsigned short* buffer( NULL );
+        freenect_sync_get_depth( (void**)&buffer, &ts, 0, FREENECT_DEPTH_10BIT );
+        //characteristics( buffer );
+        scale( buffer );
 
-        image->setImage( FREENECT_FRAME_W, FREENECT_FRAME_H, 0, GL_INTENSITY,
-            GL_INTENSITY, GL_UNSIGNED_SHORT, buffer, osg::Image::NO_DELETE );
+        image->setImage( FREENECT_FRAME_W, FREENECT_FRAME_H, 0, GL_INTENSITY16,
+            GL_LUMINANCE, GL_UNSIGNED_SHORT, reinterpret_cast< unsigned char* >( buffer ), osg::Image::NO_DELETE );
 
         viewer.frame();
     }
