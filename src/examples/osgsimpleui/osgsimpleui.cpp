@@ -4,8 +4,11 @@
 
 #include <liblivescene/Version.h>
 #include <iostream>
+#include <deque>
 
+// For testing:
 //#undef OSGWORKS_FOUND
+
 #ifdef OSGWORKS_FOUND
 #  include <osgwTools/Shapes.h>
 #  include <osgwTools/Version.h>
@@ -17,7 +20,7 @@
 #include <osgGA/TrackballManipulator>
 #include <osg/Texture2D>
 #include <osg/Geometry>
-
+#include <osg/MatrixTransform>
 
 osg::Node* createScene( osg::Texture2D* tex )
 {
@@ -68,6 +71,83 @@ osg::Node* createScene( osg::Texture2D* tex )
     return( geode.release() );
 }
 
+osg::Node* square()
+{
+    osg::ref_ptr< osg::Geode > geode = new osg::Geode;
+    osg::Geometry* geom = new osg::Geometry;
+    double extent( 10. );
+#ifdef OSGWORKS_FOUND
+    geom = osgwTools::makePlane( osg::Vec3( -extent, -extent, 0. ),
+        osg::Vec3( 2.*extent, 0., 0. ), osg::Vec3( 0., 2.*extent, 0. ) );
+#else
+    geom = osg::createTexturedQuadGeometry( osg::Vec3( -extent, -extent., 0. ),
+        osg::Vec3( 2.*extent, 0., 0. ), osg::Vec3( 0., 2.*extent, 0. ) );
+#endif
+    geode->addDrawable( geom );
+
+    osg::StateSet* stateSet = geode->getOrCreateStateSet();
+    stateSet->setRenderBinDetails( 1, "RenderBin" );
+    stateSet->setMode( GL_DEPTH_TEST, false );
+    stateSet->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
+
+    return( geode.release() );
+}
+
+
+osg::Vec2s getMinLocation( unsigned short* buf )
+{
+    unsigned short* ptr = buf;
+    unsigned short minVal( 0xffff );
+    osg::Vec2s minLoc;
+
+    unsigned short sdx, tdx;
+    for( tdx=0; tdx<FREENECT_FRAME_H; tdx++ )
+    {
+        for( sdx=0; sdx<FREENECT_FRAME_W; sdx++ )
+        {
+            if( *ptr < minVal )
+            {
+                minVal = *ptr;
+                minLoc.set( sdx, tdx );
+            }
+            ptr++;
+        }
+    }
+    return( minLoc );
+}
+
+
+typedef std::deque< osg::Vec2f > Vec2Vec;
+Vec2Vec smooth;
+
+osg::Vec2 scaleAndSmooth( const osg::Vec2s& loc, float width, float height )
+{
+    // Scale to full viewport.
+    float sx = width / (float)FREENECT_FRAME_W;
+    float sy = height / (float)FREENECT_FRAME_H;
+    osg::Vec2f newLoc;
+    newLoc[0] = (float)loc[0] * sx;
+    newLoc[1] = (float)loc[1] * sy;
+
+    // Invert into window space
+    newLoc[0] = width - newLoc[0];
+    newLoc[1] = height - newLoc[1];
+
+    // Add to the smoothing vector (last n locations)
+    const int n( 4 ); // 10 seemed a bit sluggish.
+    smooth.push_back( newLoc );
+    while( smooth.size() > n )
+        smooth.pop_front();
+
+    // Compute total of all locations
+    osg::Vec2 total;
+    Vec2Vec::const_iterator itr;
+    for( itr=smooth.begin(); itr!=smooth.end(); itr++ )
+        total += *itr;
+
+    // Return average location
+    return( total / smooth.size() );
+}
 
 int main()
 {
@@ -89,20 +169,34 @@ int main()
     osgViewer::Viewer viewer;
     viewer.addEventHandler( new osgViewer::StatsHandler() );
     viewer.setThreadingModel( osgViewer::ViewerBase::SingleThreaded );
-    viewer.setSceneData( createScene( tex.get() ) );
 
-    viewer.setUpViewInWindow( 30, 30, 1280, 1024 );
-    viewer.getCamera()->setProjectionMatrix( osg::Matrix::ortho( 0., 1279., 0., 1023., -1., 1. ) );
+    viewer.setUpViewInWindow( 30, 30, 800, 600 );
+    float width( 1280 ), height( 1024 );
+    viewer.getCamera()->setProjectionMatrix( osg::Matrix::ortho( 0., width-1., 0., height-1., -1., 1. ) );
     viewer.getCamera()->setViewMatrix( osg::Matrix::identity() );
+
+    osg::ref_ptr< osg::Group > root = new osg::Group;
+    root->addChild( createScene( tex.get() ) );
+    viewer.setSceneData( root.get() );
+
+    osg::ref_ptr< osg::MatrixTransform > mt = new osg::MatrixTransform;
+    mt->addChild( square() );
+    root->addChild( mt.get() );
 
     while( !viewer.done() )
     {
         uint32_t ts;
-        unsigned char* buffer( NULL );
-        freenect_sync_get_video( (void**)&buffer, &ts, 0, FREENECT_VIDEO_RGB );
+        unsigned char* rgb( NULL );
+        freenect_sync_get_video( (void**)&rgb, &ts, 0, FREENECT_VIDEO_RGB );
+
+        unsigned short* depth( NULL );
+        freenect_sync_get_depth( (void**)&depth, &ts, 0, FREENECT_DEPTH_11BIT );
+        osg::Vec2s loc = getMinLocation( depth );
+        osg::Vec2 pos = scaleAndSmooth( loc, width, height );
+        mt->setMatrix( osg::Matrix::translate( pos.x(), pos.y(), 0. ) );
 
         image->setImage( FREENECT_FRAME_W, FREENECT_FRAME_H, 0, GL_RGB,
-            GL_RGB, GL_UNSIGNED_BYTE, buffer, osg::Image::NO_DELETE );
+            GL_RGB, GL_UNSIGNED_BYTE, rgb, osg::Image::NO_DELETE );
 
         viewer.frame();
     }
