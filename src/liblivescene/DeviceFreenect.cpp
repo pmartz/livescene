@@ -73,6 +73,9 @@ DeviceFreenectFactory::~DeviceFreenectFactory()
 	// <<<>>> we should freenect_close_device all outstanding freenect devices
 	// but they're not being tracked yet
 
+	// stop the sync
+	freenect_sync_stop();
+
 	// finally, close the context
 	if(_f_ctx)
 	{
