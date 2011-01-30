@@ -31,6 +31,9 @@ add_library( ${LIB_NAME}
 if( BUILD_SHARED_LIBS )
     target_link_libraries( ${LIB_NAME}
         ${OSG_LIBRARIES}
+        ${LIBFREENECT_LIBRARIES}
+        ${LIBUSB_1_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT}
     )
 endif()
 
