@@ -29,25 +29,25 @@ be utilized in the future.
 
 */
 
-class LIVESCENE_EXPORT DeviceManager
+class DeviceManager
 {
 	public:
-		DeviceManager();
-		~DeviceManager();
+		LIVESCENE_EXPORT DeviceManager();
+		LIVESCENE_EXPORT ~DeviceManager();
 
 		/** List all devices meeting a name criteria. Returns true for success. */
-		bool enumDevicesByName(FactoryCollection &factoryCollection, std::string name);
-		bool enumDevicesByName(FactoryCollection &factoryCollection, const StringContainer nameCriteria);
+		LIVESCENE_EXPORT bool enumDevicesByName(FactoryCollection &factoryCollection, std::string name);
+		LIVESCENE_EXPORT bool enumDevicesByName(FactoryCollection &factoryCollection, const StringContainer nameCriteria);
 
 		/** List all devices meeting capability criteria. Returns true for success. */
-		bool enumDevicesByCapability(FactoryCollection &factoryCollection, const StringContainer capabilityCriteria);
+		LIVESCENE_EXPORT bool enumDevicesByCapability(FactoryCollection &factoryCollection, const StringContainer capabilityCriteria);
 
 		/** Acquire a specific device by its name and unit number.
 		unit = -1 signifies use next available unit. */
-		DeviceBase *aquireDeviceByName(std::string name, int unit = -1);
+		LIVESCENE_EXPORT DeviceBase *aquireDeviceByName(std::string name, int unit = -1);
 
 		/** Acquire a generic by requesting capabilities. Always chooses first/next available unit. */
-		DeviceBase *acquireDeviceByCapabilities(const StringContainer capabilityCriteria);
+		LIVESCENE_EXPORT DeviceBase *acquireDeviceByCapabilities(const StringContainer capabilityCriteria);
 
 	private:
 		static DeviceManager *_instance;

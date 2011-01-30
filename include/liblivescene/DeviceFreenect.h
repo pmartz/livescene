@@ -26,48 +26,48 @@ Should also supports these capabilities interfaces later: Mount, Audio, Accelero
 
 
 
-class LIVESCENE_EXPORT DeviceFreenectFactory : public DeviceFactory
+class DeviceFreenectFactory : public DeviceFactory
 {
 	public:
 		/** */
-		DeviceFreenectFactory();
-		~DeviceFreenectFactory();
+		LIVESCENE_EXPORT DeviceFreenectFactory();
+		LIVESCENE_EXPORT ~DeviceFreenectFactory();
 
 		/** get Type of LiveScene Device, like "DeviceFreenect" */
-		std::string getType(void) {return("DeviceFreenect");}
+		LIVESCENE_EXPORT std::string getType(void) {return("DeviceFreenect");}
 
 		/** get API used by device, like "libfreenect" */
-		std::string getAPI(void) {return("libfreenect");}
+		LIVESCENE_EXPORT std::string getAPI(void) {return("libfreenect");}
 
 		/** get Vendor string. Meaning is specific to the LiveScene Device. Could be "Microsoft XBox 360 Kinect" */
-		std::string getVendor(void) {return("Microsoft XBox 360 Kinect");}
+		LIVESCENE_EXPORT std::string getVendor(void) {return("Microsoft XBox 360 Kinect");}
 
 		/** get Version string. Could be version of API library */
-		std::string getVersion(void) {return("");}
+		LIVESCENE_EXPORT std::string getVersion(void) {return("");}
 
 		/** get hardware description for this Device Unit. "XBox 360 Kinect V1" */
-		std::string getHardware(void) {return("XBox 360 Kinect V1");}
+		LIVESCENE_EXPORT std::string getHardware(void) {return("XBox 360 Kinect V1");}
 
 		/** get extension strings for this API/Device. Similar to OpenGL extensions. */
-		void getExtensions(StringContainer &stringContainer);
+		LIVESCENE_EXPORT void getExtensions(StringContainer &stringContainer);
 		
 		/** get capability strings for this API/Device. Similar to OpenGL extensions. */
-		void getCapabilities(StringContainer &stringContainer);
+		LIVESCENE_EXPORT void getCapabilities(StringContainer &stringContainer);
 
 		/** test capability strings against provided string. Wildcards may be permitted. */
-		bool testCapability(const std::string capability);
+		LIVESCENE_EXPORT bool testCapability(const std::string capability);
 
 		/** How many total units are present? */
-		int getTotalUnits(void);
+		LIVESCENE_EXPORT int getTotalUnits(void);
 
 		/** How many units are still available? */
-		int getAvailableUnits(void);
+		LIVESCENE_EXPORT int getAvailableUnits(void);
 
 		/** Create a device using the supplied unit number, and optionally some capabilities */
-		DeviceBase *createDevice(int unit, StringContainer capabilityCriteria);
+		LIVESCENE_EXPORT DeviceBase *createDevice(int unit, StringContainer capabilityCriteria);
 
 		/** Destroy a device. */
-		void DeviceFreenectFactory::destroyDevice(DeviceBase *device);
+		LIVESCENE_EXPORT void DeviceFreenectFactory::destroyDevice(DeviceBase *device);
 
 
 	private:
