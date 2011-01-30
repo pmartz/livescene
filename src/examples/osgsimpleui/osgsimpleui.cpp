@@ -84,7 +84,6 @@ osg::Node* hudElement()
     geode->addDrawable( text.get() );
 
     osg::StateSet* stateSet = geode->getOrCreateStateSet();
-    stateSet->setRenderBinDetails( 1, "RenderBin" );
     stateSet->setMode( GL_DEPTH_TEST, false );
     stateSet->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
 
