@@ -100,7 +100,7 @@ bool DeviceFreenectFactory::testCapability(const std::string capability)
 
 int DeviceFreenectFactory::getTotalUnits(void)
 {
-	freenect_num_devices(_f_ctx);
+	_numUnits = freenect_num_devices(_f_ctx);
 	return(_numUnits);
 } // DeviceFreenectFactory::getTotalUnits
 
