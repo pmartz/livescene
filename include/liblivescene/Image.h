@@ -37,10 +37,11 @@ class LIVESCENE_EXPORT Image
 	public:
 
 		/**  */
+		Image(const Image &image, bool cloneData = false); // copy constructor can make a local, persistent copy of the data
 		Image(int width = 640, int height = 480, int depth = 1, VideoFormat format = VIDEO_RGB)
-			: _width(width), _height(height), _depth(depth), _format(format), _timestamp(0), _data(NULL)
+			: _width(width), _height(height), _depth(depth), _format(format), _timestamp(0), _data(NULL), _dataSelfAllocated(false)
 		{}
-		~Image() {}
+		~Image();
 
 		void setData(void *data) {_data = data;}
 		void *getData(void) const {return(_data);}
@@ -55,10 +56,14 @@ class LIVESCENE_EXPORT Image
 		void setTimestamp(const unsigned long Timestamp) {_timestamp = Timestamp;}
 
 	private:
+		void freeData(void);
+		void allocData(void);
+
 		int _width, _height, _depth;
 		VideoFormat _format;
         unsigned long _timestamp;
 		void *_data; // this is not resource tracked or freed, it's just a dumb pointer for transport
+		bool _dataSelfAllocated;
 
 }; // Image
 

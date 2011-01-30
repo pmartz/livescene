@@ -21,6 +21,7 @@ set( _livesceneSourceFiles
     DeviceFactory.cpp
     DeviceFreenect.cpp
     DeviceManager.cpp
+    Image.cpp
     Version.cpp
 )
 

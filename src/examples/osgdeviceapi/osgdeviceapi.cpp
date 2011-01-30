@@ -121,8 +121,10 @@ int main()
 			ImageCapabilitiesZ->getImageSync(imageZ);
 		} // if
 
+		livescene::Image persistentImageRGB(imageRGB, true); // try making a persistent copy
+
         image->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
-            GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(imageRGB.getData()), osg::Image::NO_DELETE );
+            GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(persistentImageRGB.getData()), osg::Image::NO_DELETE );
 		// <<<>>> do something with the Z value
 
         viewer.frame();
