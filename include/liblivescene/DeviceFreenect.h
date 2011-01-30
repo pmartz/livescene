@@ -14,6 +14,8 @@
 
 namespace livescene {
 
+// forward delcaration
+class DeviceFreenect;
 
 /** \defgroup Freenect Freenect Device */
 /*@{*/
@@ -28,6 +30,7 @@ Should also supports these capabilities interfaces later: Mount, Audio, Accelero
 
 class DeviceFreenectFactory : public DeviceFactory
 {
+	friend class DeviceFreenect; // to allow use of increase/decrease allocated units
 	public:
 		/** */
 		LIVESCENE_EXPORT DeviceFreenectFactory();
@@ -71,6 +74,8 @@ class DeviceFreenectFactory : public DeviceFactory
 
 
 	private:
+		void increaseAllocatedUnits(void) {_allocatedUnits++;}
+		void decreaseAllocatedUnits(void) {if(_allocatedUnits > 0) _allocatedUnits--;}
 		int _numUnits;
 		int _allocatedUnits;
 		StringContainer _currentCapabilities;
@@ -92,7 +97,7 @@ class LIVESCENE_EXPORT DeviceFreenect : public DeviceBase, public DeviceCapabili
 {
 	public:
 		/** */
-		DeviceFreenect(int unit, StringContainer capabilityCriteria);
+		DeviceFreenect(DeviceFreenectFactory *hostFactory, int unit, StringContainer capabilityCriteria);
 		~DeviceFreenect();
 
 		// all these methods are wrappers for the same functionality on this Device's factory, which knows the answers
@@ -128,6 +133,9 @@ class LIVESCENE_EXPORT DeviceFreenect : public DeviceBase, public DeviceCapabili
 		capability. Returns NULL for failure. dynamic_cast it to the desired interface
 		if successful. */
 		void *requestCapabilityInterface(std::string capability);
+
+		// releases interfaces obtained with the above.
+		virtual void releaseCapabilityInterface(void *interface) {}; // no-op currently
 
 
 		// From DeviceCapabilitiesImage
@@ -171,6 +179,7 @@ class LIVESCENE_EXPORT DeviceFreenect : public DeviceBase, public DeviceCapabili
 		int _freenect_angle;
 		int _freenect_led;
 		DeviceFreenectFactory *_hostFactory;
+		int _defaultWidth, _defaultHeight, _defaultRGBdepth, _defaultZdepth;
 
 }; // DeviceFreenect
 

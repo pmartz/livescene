@@ -63,10 +63,11 @@ class LIVESCENE_EXPORT DeviceBase
 		/** request a pointer to an interface object that implements the desired
 		capability. Returns NULL for failure. dynamic_cast it to the desired interface
 		if successful.
-		<<<>>> TBD: Do we need a releaseCapabilityInterface() ?
-		TBD: Should we return some sort of abstract interface base class so we can safely dynamic_cast from it?*/
+		<<<>>> TBD: Should we return some sort of abstract interface base class so we can safely dynamic_cast from it?*/
 		virtual void *requestCapabilityInterface(std::string capability) = 0;
 
+		// releases interfaces obtained with the above.
+		virtual void releaseCapabilityInterface(void *interface) = 0;
 
 	private:
 		int _unit;

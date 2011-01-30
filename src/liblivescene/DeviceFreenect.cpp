@@ -119,8 +119,7 @@ DeviceBase *DeviceFreenectFactory::createDevice(int unit, StringContainer capabi
 	if(getAvailableUnits() > 0)
 	{
 		// create and return a DeviceFreenect
-		newDevice = new DeviceFreenect(unit, capabilityCriteria);
-		_allocatedUnits++;
+		newDevice = new DeviceFreenect(this, unit, capabilityCriteria); // this automatically calls back to DeviceFreenectFactory::increaseAllocatedUnits()
 	} // if
 
 	return(newDevice);
@@ -128,9 +127,7 @@ DeviceBase *DeviceFreenectFactory::createDevice(int unit, StringContainer capabi
 
 void DeviceFreenectFactory::destroyDevice(DeviceBase *device)
 {
-	delete device;
-	if(_allocatedUnits > 0)
-		_allocatedUnits--;
+	delete device; // this automatically calls back to DeviceFreenectFactory::decreaseAllocatedUnits()
 } // DeviceFreenectFactory::destroyDevice
 
 
@@ -142,14 +139,16 @@ void DeviceFreenectFactory::destroyDevice(DeviceBase *device)
 
 
 
-DeviceFreenect::DeviceFreenect(int unit, StringContainer capabilityCriteria) :
-DeviceBase(unit), _freenect_angle(0), _freenect_led(0), _f_dev(NULL)
+DeviceFreenect::DeviceFreenect(DeviceFreenectFactory *hostFactory, int unit, StringContainer capabilityCriteria) :
+_hostFactory(hostFactory), DeviceBase(unit), _freenect_angle(0), _freenect_led(0), _f_dev(NULL), _defaultWidth(FREENECT_FRAME_W), _defaultHeight(FREENECT_FRAME_H), _defaultRGBdepth(3), _defaultZdepth(2)
 {
+	_hostFactory->increaseAllocatedUnits();
 	// <<<>>> nothing to do at this point, sync interface is pretty spartan
 } // DeviceFreenect::DeviceFreenect
 
 DeviceFreenect::~DeviceFreenect()
 {
+	_hostFactory->decreaseAllocatedUnits();
 	// <<<>>> close freenect device
 	// sync interface is pretty sparse
 	freenect_sync_stop();
@@ -198,7 +197,7 @@ bool DeviceFreenect::getImageSync(livescene::Image &image)
 			return(true);
 		} // if
 	} // if
-	else if(image.getFormat() == livescene::VIDEO_RGB)
+	else if(image.getFormat() == livescene::DEPTH_10BIT)
 	{
         uint32_t ts;
         unsigned short* buffer( NULL );
@@ -220,46 +219,48 @@ bool DeviceFreenect::getCurrentImageInfo(livescene::Image &image)
 {
 	// we can't currently change the settings and don't track current settings, so
 	// this is something of a stub for when we can
-	// <<<>>>
+	image = livescene::Image(getCurrentImageWidth(image.getFormat()), getCurrentImageHeight(image.getFormat()), getCurrentImageDepth(image.getFormat()), image.getFormat());
 	return(false);
 } // DeviceFreenect::getCurrentImageInfo
 
 int DeviceFreenect::getCurrentImageWidth(const VideoFormat format)
 {
-	// we can't currently change the settings and don't track current settings, so
+	// we can't currently change the settings, so
 	// this is something of a stub for when we can
-	// <<<>>> 
-	return(FREENECT_FRAME_W);
+	return(_defaultWidth);
 } // DeviceFreenect::getCurrentImageWidth
 
 int DeviceFreenect::getCurrentImageHeight(const VideoFormat format)
 {
-	// we can't currently change the settings and don't track current settings, so
+	// we can't currently change the settings, so
 	// this is something of a stub for when we can
-	// <<<>>> 
-	return(FREENECT_FRAME_H);
+	return(_defaultHeight);
 } // DeviceFreenect::getCurrentImageHeight
 
 int DeviceFreenect::getCurrentImageDepth(const VideoFormat format)
 {
-	// we can't currently change the settings and don't track current settings, so
+	// we can't currently change the settings, so
 	// this is something of a stub for when we can
-	// <<<>>> 
-	return(3); // only RGB supported currently
+	switch(format)
+	{
+	case livescene::VIDEO_RGB: return(_defaultRGBdepth); break;
+	case livescene::DEPTH_10BIT: return(_defaultZdepth); break;
+	default: return(0); break;
+	} // switch format
 } // DeviceFreenect::getCurrentImageDepth
 
 bool DeviceFreenect::setCurrentImageInfo(const livescene::Image &image)
 {
-	// we can't currently change the settings and don't track current settings, so
+	// we can't currently change the settings, so
 	// this is something of a stub for when we can
 	// <<<>>> width, height, depth
 	// <<<>>> format
-	return(true);
+	return(false);
 } // DeviceFreenect::setCurrentImageInfo
 
 bool DeviceFreenect::setCurrentImageWidth(VideoFormat format)
 {
-	// we can't currently change the settings and don't track current settings, so
+	// we can't currently change the settings, so
 	// this is something of a stub for when we can
 	// <<<>>> 
 	return(false);
