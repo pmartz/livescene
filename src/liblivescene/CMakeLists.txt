@@ -7,11 +7,20 @@ endif()
 
 set( HEADER_PATH ${PROJECT_SOURCE_DIR}/include/${LIB_NAME} )
 set( LIB_PUBLIC_HEADERS
+    ${HEADER_PATH}/DeviceCapabilities.h
+    ${HEADER_PATH}/DeviceFactory.h
+    ${HEADER_PATH}/DeviceFreenect.h
+    ${HEADER_PATH}/Device.h
+    ${HEADER_PATH}/DeviceManager.h
+    ${HEADER_PATH}/Image.h
     ${HEADER_PATH}/Export.h
     ${HEADER_PATH}/Version.h
 )
 
 set( _livesceneSourceFiles
+    DeviceFactory.cpp
+    DeviceFreenect.cpp
+    DeviceManager.cpp
     Version.cpp
 )
 
