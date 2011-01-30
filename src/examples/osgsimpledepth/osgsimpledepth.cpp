@@ -71,8 +71,8 @@ void characteristics( unsigned short* buf )
             ptr++;
         }
     }
-    std::cout << "Max depth value: " << maxVal << " at " << maxLoc << std::endl;
-    std::cout << "  Min depth value: " << minVal << " at " << minLoc << std::endl;
+    //std::cout << "Max depth value: " << maxVal << " at " << maxLoc << std::endl;
+    //std::cout << "  Min depth value: " << minVal << " at " << minLoc << std::endl;
 }
 void scale( unsigned short* buf )
 {

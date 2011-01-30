@@ -4,6 +4,7 @@
 #include <libfreenect_sync.h>
 
 #include <liblivescene/Version.h>
+#include <osg/Version>
 #include <iostream>
 
 #ifdef OSGWORKS_FOUND
@@ -21,6 +22,8 @@ int main()
 #else
     std::cout << "UNAVAILABLE" << std::endl;
 #endif
+    // Interesting, osgGetVersion() is not in a namespace...
+    std::cout << "OpenSceneGraph version: " << osgGetVersion() << std::endl;
 
     return( 0 );
 }
