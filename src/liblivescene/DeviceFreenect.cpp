@@ -208,6 +208,17 @@ bool DeviceFreenect::getImageSync(livescene::Image &image)
 			return(true);
 		} // if
 	} // else if
+	else if(image.getFormat() == livescene::DEPTH_11BIT)
+	{
+        uint32_t ts;
+        unsigned short* buffer( NULL );
+        if(freenect_sync_get_depth( (void**)&buffer, &ts, getUnit(), FREENECT_DEPTH_11BIT ) == 0)
+		{
+			image.setTimestamp(ts);
+			image.setData(buffer);
+			return(true);
+		} // if
+	} // else if
 return(false);
 } // DeviceFreenect::getImageSync
 
