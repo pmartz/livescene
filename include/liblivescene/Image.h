@@ -4,18 +4,13 @@
 #define __LIVESCENE_IMAGE_H__ 1
 
 #include "liblivescene/Export.h"
-#include <string>
 
 
 namespace livescene {
 
 
-/** \defgroup Device Device Management */
+/** \defgroup Image Image Operations */
 /*@{*/
-
-/** \brief Image core object.
-
-*/
 
 typedef enum {
 	VIDEO_RGB             = 0, /**< Decompressed RGB mode (demosaicing already done) */
@@ -32,6 +27,11 @@ typedef enum {
 } VideoFormat;
 
 
+/** \brief Image core object.
+
+*/
+
+
 class LIVESCENE_EXPORT Image
 {
 	public:
@@ -39,9 +39,11 @@ class LIVESCENE_EXPORT Image
 		/**  */
 		Image(const Image &image, bool cloneData = false); // copy constructor can make a local, persistent copy of the data
 		Image(int width = 640, int height = 480, int depth = 1, VideoFormat format = VIDEO_RGB)
-			: _width(width), _height(height), _depth(depth), _format(format), _timestamp(0), _data(NULL), _dataSelfAllocated(false)
+			: _width(width), _height(height), _depth(depth), _format(format), _timestamp(0), _nullValue(0), _data(0), _dataSelfAllocated(false)
 		{}
 		~Image();
+
+		Image & operator= (const Image & rhs);
 
 		void setData(void *data) {_data = data;}
 		void *getData(void) const {return(_data);}
@@ -55,11 +57,17 @@ class LIVESCENE_EXPORT Image
 		unsigned long getTimestamp(void) const {return(_timestamp);}
 		void setTimestamp(const unsigned long Timestamp) {_timestamp = Timestamp;}
 
+		int getNull(void) const {return(_nullValue);}
+		void setNull(int newNull) {_nullValue = newNull;}
+
+		// this will ensure the image is allocated to the proper size and ready to write to
+		bool preAllocate(void);
+
 	private:
 		void freeData(void);
 		void allocData(void);
 
-		int _width, _height, _depth;
+		int _width, _height, _depth, _nullValue;
 		VideoFormat _format;
         unsigned long _timestamp;
 		void *_data; // this is not resource tracked or freed, it's just a dumb pointer for transport
