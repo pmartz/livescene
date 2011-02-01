@@ -14,16 +14,16 @@ bool Background::loadBackgroundFromCleanPlate(const livescene::Image &cleanPlate
 
 bool Background::loadRGBBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB)
 {
-	_bgRGB = cleanPlateRGB;
+	_bgRGB = livescene::Image(cleanPlateRGB, true); // clone image for persistent storage. Note this does two copies, which is inefficient
 	_backgroundAvailable = true; // technically not true until you load the Z too
-	return(false);
+	return(true);
 } // Background::loadRGBBackgroundFromCleanPlate
 
 bool Background::loadZBackgroundFromCleanPlate(const livescene::Image &cleanPlateZ)
 {
-	_bgZ = cleanPlateZ;
+	_bgZ = livescene::Image(cleanPlateZ, true); // clone image for persistent storage. Note this does two copies, which is inefficient
 	_backgroundAvailable = true; // technically not true until you load the RGB too
-	return(false);
+	return(true);
 } // Background::loadZBackgroundFromCleanPlate
 
 
@@ -57,7 +57,7 @@ bool Background::extractZBackground(const livescene::Image &liveZ, livescene::Im
 	unsigned short *foreZData = (unsigned short *)foregroundZ.getData();
 	unsigned short foreZnull = (unsigned short)foregroundZ.getNull();
 	
-	const int maxSample = _bgZ.getWidth() * _bgZ.getHeight();
+	const int maxSample = _bgZ.getSamples();
 	for(int sample = 0; sample < maxSample; sample++)
 	{
 		const int liveZsample = liveZData[sample];
