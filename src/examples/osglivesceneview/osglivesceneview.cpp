@@ -26,26 +26,6 @@
 static const int NominalFrameW = 640, NominalFrameH = 480;
 
 
-/*
-osg::Node* createScene( osg::Texture2D* tex )
-{
-    osg::ref_ptr< osg::Geode > geode = new osg::Geode;
-#ifdef OSGWORKS_FOUND
-    geode->addDrawable( osgwTools::makePlane( osg::Vec3( -1., 0., -1. ),
-        osg::Vec3( NominalFrameW, 0., 0. ), osg::Vec3( 0., 0., -NominalFrameH ) ) );
-#else
-    geode->addDrawable( osg::createTexturedQuadGeometry( osg::Vec3( -1., 0., -1. ),
-        osg::Vec3( 2., 0., 0. ), osg::Vec3( 0., 0., 2. ) ) );
-#endif
-
-    osg::StateSet* stateSet = geode->getOrCreateStateSet();
-    stateSet->setTextureAttributeAndModes( 0, tex );
-    stateSet->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
-
-    return( geode.release() );
-}
-*/
-
 int main()
 {
 
@@ -96,7 +76,6 @@ int main()
 	} // if
 
 
-	/*
 	osg::ref_ptr< osg::Image > image = new osg::Image;
     image->setDataVariance( osg::Object::DYNAMIC );
 
@@ -105,13 +84,11 @@ int main()
     tex->setResizeNonPowerOfTwoHint( false );
     tex->setTextureSize( NominalFrameW, NominalFrameH );
     tex->setImage( image.get() );
-	*/
 
     osgViewer::Viewer viewer;
     viewer.addEventHandler( new osgViewer::StatsHandler() );
     viewer.setThreadingModel( osgViewer::ViewerBase::SingleThreaded );
     viewer.setUpViewInWindow( 30, 30, 800, 600 );
-    //viewer.setSceneData( createScene( tex.get() ) );
 
     osgGA::TrackballManipulator* tbm = new osgGA::TrackballManipulator();
     viewer.setCameraManipulator( tbm );
@@ -132,9 +109,10 @@ int main()
     {
 		livescene::Image imageRGB(NominalFrameW, NominalFrameH, 3, livescene::VIDEO_RGB);
 		livescene::Image imageZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT);
+		livescene::Image foreZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT); // only the foreground
 		if(ImageCapabilitiesRGB)
 		{
-			//ImageCapabilitiesRGB->getImageSync(imageRGB);
+			ImageCapabilitiesRGB->getImageSync(imageRGB);
 		} // if
 		if(ImageCapabilitiesZ)
 		{
@@ -143,26 +121,32 @@ int main()
 
 		if(!backgroundEstablished)
 		{ // store a background clean plate
-			//background.loadBackgroundFromCleanPlate(imageRGB, imageZ);
+			background.loadBackgroundFromCleanPlate(imageRGB, imageZ);
+			backgroundEstablished = true;
 		} // if
 
-		//livescene::Image persistentImageRGB(imageRGB, true); // test making a persistent copy
+		livescene::Image persistentImageRGB(imageRGB, true); // test making a persistent copy
 
-		//background.extractZBackground(imageZ, foreZ); // <<<>>> can't do this yet, we'll need an output foreZ object
+		foreZ.preAllocate(); // need room to write processed data to
+		background.extractZBackground(imageZ, foreZ); // wipe out everything that is in the background plate
+		//geometryBuilder.buildPointCloud(foreZ, &imageRGB);
 
-		geometryBuilder.buildPointCloud(imageZ, &imageRGB);
+		geometryBuilder.buildPointCloud(imageZ, &imageRGB); // do it without background isolation
 
 		// build a new cloud object on every frame
 		osg::ref_ptr<osg::Geode> pointCloud;
 		pointCloud = livescene::buildOSGPointCloudCopy(geometryBuilder);
+
+		// setup texturing
+		osg::StateSet* stateSet = pointCloud->getOrCreateStateSet();
+		stateSet->setTextureAttributeAndModes( 0, tex );
+		stateSet->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
+
 		kinectTransform->removeChildren(0, 1); // this should throw away the removed child
 		kinectTransform->addChild(pointCloud);
 
-        /*
 		image->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
             GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(persistentImageRGB.getData()), osg::Image::NO_DELETE );
-		*/
-		// <<<>>> do something with the Z value
 
         viewer.frame();
     }

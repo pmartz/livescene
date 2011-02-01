@@ -77,21 +77,27 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &g
         // which std::vector<> provides all the convenience, flexibility and robustness
         // of the most popular of all STL containers.
         osg::Vec3Array* vertices = new osg::Vec3Array;
+		osg::Vec2Array* texCoords = new osg::Vec2Array;
 		short *shortVertices = geometry.getVertices();
+		float *floatTexCoords = geometry.getTexCoord();
 		for(unsigned int vertexLoop = 0; vertexLoop < geometry.getNumVertices(); vertexLoop++)
 		{
 	        vertices->push_back(osg::Vec3(shortVertices[vertexLoop * 3], shortVertices[vertexLoop * 3 + 1], shortVertices[vertexLoop * 3 + 2]));
+			texCoords->push_back(osg::Vec2(floatTexCoords[vertexLoop * 2], floatTexCoords[vertexLoop * 2 + 1]));
 		} // for
         
         // pass the created vertex array to the points geometry object.
         pointsGeom->setVertexArray(vertices);
         
-        // create the color of the geometry, one single for the whole geometry.
+        // pass the created texCoord array
+        pointsGeom->setTexCoordArray(0, texCoords);
+
+		// create the color of the geometry, one single for the whole geometry.
         // for consistency of design even one single color must added as an element
         // in a color array.
         osg::Vec4Array* colors = new osg::Vec4Array;
         // add a white color, colors take the form r,g,b,a with 0.0 off, 1.0 full on.
-        colors->push_back(osg::Vec4(1.0f,1.0f,0.0f,1.0f));
+        colors->push_back(osg::Vec4(1.0f,1.0f,1.0f,1.0f));
         
         // pass the color array to points geometry, note the binding to tell the geometry
         // that only use one color for the whole object.

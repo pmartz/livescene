@@ -66,7 +66,7 @@ private:
 	unsigned int _numVertices, _numIndices, _numNormals, _numTexCoords;
 
 	void freeData(void);
-	void allocData(unsigned int numVert, unsigned int numId);
+	void allocData(unsigned int numVert, unsigned int numId, unsigned int numTex, unsigned int numNorm);
 
 }; // Geometry
 
