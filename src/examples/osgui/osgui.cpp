@@ -17,7 +17,35 @@
 #include <osgViewer/ViewerEventHandlers>
 #include <osgDB/ReadFile>
 #include <osgGA/TrackballManipulator>
+#include <osgGA/GUIEventHandler>
 #include <osg/Texture2D>
+
+
+class TestEventHandler : public osgGA::GUIEventHandler
+{
+public:
+    virtual bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa )
+    {
+        bool handled( false );
+        switch( ea.getEventType() )
+        {
+        case osgGA::GUIEventAdapter::PUSH:
+            std::cout << "Got PUSH  ";
+            std::cout << ea.getX() << ", " << ea.getY() << std::endl;
+            break;
+        case osgGA::GUIEventAdapter::DRAG:
+            std::cout << "Got DRAG  ";
+            std::cout << ea.getX() << ", " << ea.getY() << std::endl;
+            break;
+        case osgGA::GUIEventAdapter::RELEASE:
+            std::cout << "Got RELEASE  ";
+            std::cout << ea.getX() << ", " << ea.getY() << std::endl;
+            break;
+        }
+        return( handled );
+    }
+};
+
 
 static const int NominalFrameW = 640, NominalFrameH = 480;
 
@@ -100,9 +128,14 @@ int main()
 
     osgGA::TrackballManipulator* tbm = new osgGA::TrackballManipulator();
     viewer.setCameraManipulator( tbm );
+    viewer.addEventHandler( new TestEventHandler() );
 
     // Create an instance of the UserInteraction object.
-    livescene::UserInteraction ui;
+    viewer.realize();
+    osgViewer::ViewerBase::Windows windows;
+    viewer.getWindows( windows );
+    livescene::UserInteraction ui( *( windows[ 0 ] ) );
+
     while( !viewer.done() )
     {
         livescene::Image imageRGB(NominalFrameW, NominalFrameH, 3, livescene::VIDEO_RGB);
@@ -111,7 +144,7 @@ int main()
         imageCapabilitiesZ->getImageSync(imageZ);
 
         // Detect user interaction.
-        ui.detection( imageRGB, imageZ );
+        ui.detectAndSendEvents( imageRGB, imageZ );
 
         livescene::Image persistentImageRGB(imageRGB, true); // try making a persistent copy
 
