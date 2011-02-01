@@ -13,9 +13,11 @@ set( LIB_PUBLIC_HEADERS
     ${HEADER_PATH}/DeviceFreenect.h
     ${HEADER_PATH}/Device.h
     ${HEADER_PATH}/DeviceManager.h
+    ${HEADER_PATH}/GeometryBuilder.h
     ${HEADER_PATH}/Image.h
     ${HEADER_PATH}/UserInteraction.h
     ${HEADER_PATH}/Export.h
+    ${HEADER_PATH}/osgGeometry.h
     ${HEADER_PATH}/Version.h
 )
 
@@ -24,7 +26,9 @@ set( _livesceneSourceFiles
     DeviceFactory.cpp
     DeviceFreenect.cpp
     DeviceManager.cpp
+    GeometryBuilder.cpp
     Image.cpp
+    osgGeometry.cpp
     UserInteraction.cpp
     Version.cpp
 )
