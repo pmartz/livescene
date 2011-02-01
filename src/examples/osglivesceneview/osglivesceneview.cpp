@@ -20,6 +20,8 @@
 #include <osgDB/ReadFile>
 #include <osgGA/TrackballManipulator>
 #include <osg/Texture2D>
+#include <osg/Point>
+#include <osg/PositionAttitudeTransform>
 #include <osgDB/WriteFile>
 
 
@@ -89,6 +91,8 @@ int main()
     viewer.addEventHandler( new osgViewer::StatsHandler() );
     viewer.setThreadingModel( osgViewer::ViewerBase::SingleThreaded );
     viewer.setUpViewInWindow( 30, 30, 800, 600 );
+	//viewer.setUpViewOnSingleScreen();
+	viewer.getCamera()->setComputeNearFarMode(osgUtil::CullVisitor::DO_NOT_COMPUTE_NEAR_FAR);
 
     osgGA::TrackballManipulator* tbm = new osgGA::TrackballManipulator();
     viewer.setCameraManipulator( tbm );
@@ -98,10 +102,15 @@ int main()
 
 	livescene::Geometry geometryBuilder;
 
+	osg::ref_ptr<osg::PositionAttitudeTransform> centeringTransform = new osg::PositionAttitudeTransform();
+	centeringTransform->setPosition(osg::Vec3( 0.109038, -0.0146183, 1.74733));
 	osg::ref_ptr<osg::MatrixTransform> kinectTransform;
 	kinectTransform = livescene::buildOSGGeometryMatrixTransform();
     kinectTransform->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
-	viewer.setSceneData(kinectTransform);
+	kinectTransform->getOrCreateStateSet()->setAttribute( new osg::Point( 3.0f ), osg::StateAttribute::ON );
+
+	centeringTransform->addChild(kinectTransform);
+	viewer.setSceneData(centeringTransform);
 
 	bool oneShot(false);
 	
@@ -140,7 +149,6 @@ int main()
 		// setup texturing
 		osg::StateSet* stateSet = pointCloud->getOrCreateStateSet();
 		stateSet->setTextureAttributeAndModes( 0, tex );
-		stateSet->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
 
 		kinectTransform->removeChildren(0, 1); // this should throw away the removed child
 		kinectTransform->addChild(pointCloud);
