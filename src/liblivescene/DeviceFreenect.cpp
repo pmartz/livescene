@@ -205,6 +205,7 @@ bool DeviceFreenect::getImageSync(livescene::Image &image)
 		{
 			image.setTimestamp(ts);
 			image.setData(buffer);
+			image.setNull(1023);
 			return(true);
 		} // if
 	} // else if
@@ -216,6 +217,7 @@ bool DeviceFreenect::getImageSync(livescene::Image &image)
 		{
 			image.setTimestamp(ts);
 			image.setData(buffer);
+			image.setNull(2047);
 			return(true);
 		} // if
 	} // else if
