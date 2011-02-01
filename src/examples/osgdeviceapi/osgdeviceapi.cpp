@@ -50,43 +50,69 @@ int main()
 #endif
 
 
+	// first, you'll need a DeviceManager
 	livescene::DeviceManager *deviceManager = new livescene::DeviceManager();
-	livescene::FactoryCollection collectionA, collectionB, collectionC;
+
+	// these are DeviceFactory collections, the results of enumerations by the DeviceManager
+	// only one is needed, we have an extra for demonstration purposes
+	livescene::FactoryCollection collectionA, collectionB;
+	// StringContainer is just a container (vector) of strings, used for storing a list
+	// of string properties -- names or capabilities -- that you might want to use to help
+	// choose a device
 	livescene::StringContainer capabilityCriteria;
+
+	// The DeviceBase is the reprsentation of an actual LiveScene input device. From it, you can
+	// request capabilities interfaces, like and image-input interface
 	livescene::DeviceBase *genericDevice(NULL);
+
+	// The most interesting interface is the image-grabbing interface. Technically we need one
+	// for each, RGB and Z, though they are probably going to resolve to the same interface
 	livescene::DeviceCapabilitiesImage *ImageCapabilitiesRGB(NULL),  *ImageCapabilitiesZ(NULL);
 
 	// see what devices are available to meet various criteria
-	deviceManager->enumDevicesByName(collectionA, "");
-	deviceManager->enumDevicesByName(collectionA, "FooBar"); // should fail
-	deviceManager->enumDevicesByName(collectionA, "DeviceFreenect"); // should succeed
+	// You only need one of these, probabvly the last, or even the first if you want to be really non-specific
+	deviceManager->enumDevicesByName(collectionA, ""); // "" means any device, no specific name criteria, give us everything
+	deviceManager->enumDevicesByName(collectionA, "FooBar"); // Look for a device named FooBar. This will fail.
+	deviceManager->enumDevicesByName(collectionA, "DeviceFreenect"); // Look for the DeviceFreenect device type. This should succeed.
 
-	capabilityCriteria.clear();
+	// now let's try asking for a device not by its specific type, but by what it says it can do for us
+	capabilityCriteria.clear(); // to be safe, clear the capabilityCriteria container
 	capabilityCriteria.push_back("WORLD_PEACE"); // setup some unreasonable criteria that can't be met
-	capabilityCriteria.push_back("COOKS_REALLY_GOOD_STEAK");
-	deviceManager->enumDevicesByCapability(collectionB, capabilityCriteria); // should fail
+	capabilityCriteria.push_back("COOKS_REALLY_GOOD_STEAK"); // these strings are matched against strings the device publishes
+	deviceManager->enumDevicesByCapability(collectionB, capabilityCriteria); // We're asking for a device that can satisfy both of the above criteria. None will.
 
-	capabilityCriteria.clear();
-	capabilityCriteria.push_back("IMAGE_RGB_RESOLUTION_640x480");
-	capabilityCriteria.push_back("IMAGE_Z_RESOLUTION_640x480");
-	deviceManager->enumDevicesByCapability(collectionB, capabilityCriteria); // should succeed
+	// let's start over and ask fo realistic criteria, and we'll be rewarded with success
+	capabilityCriteria.clear(); // to be safe, clear the capabilityCriteria container
+	capabilityCriteria.push_back("IMAGE_RGB_RESOLUTION_640x480"); // Kinect basic RGB res
+	capabilityCriteria.push_back("IMAGE_Z_RESOLUTION_640x480"); // Kinect basic Z res
+	deviceManager->enumDevicesByCapability(collectionB, capabilityCriteria); // should succeed if you have a Kinect device implementation, as it provide both criteria
 
-	if(!collectionA.empty())
+	// now, from a collection of DeviceFactory's, you can pick one and ask for a device (DeviceBase)
+	// to be created from it. The DeviceBase will give you access to the Interfaces you need to do work.
+	if(!collectionA.empty()) // are there some qualifying device types in collectionA?
 	{
-		genericDevice = collectionA[0]->createDevice(-1, capabilityCriteria);
-		delete genericDevice;
+		// we'll ask for unit #-1, which means next-available unit.
+		// if you care about unit numbers, you can specify them
+		genericDevice = collectionA[0]->createDevice(-1, capabilityCriteria); // ask the first entry to instantiate a DeviceBase for us
+		delete genericDevice; // that was just for testing, we'll delete it now
 		genericDevice = NULL;
 	} // if
 
-	if(!collectionB.empty())
+	// another way to get a DeviceBase is to just ask to acquire one based on criteria
+	// without getting a collection involved. This is sort of a shortcut for what happens
+	// in the collectionB code above, and in fact we use the exact same criteria
+	// when you do this, unit #-1, or next-available is implied.
+	if(genericDevice = deviceManager->acquireDeviceByCapabilities(capabilityCriteria))
 	{
-		if(genericDevice = deviceManager->acquireDeviceByCapabilities(capabilityCriteria))
-		{
-			// On Kinect, same interface will provide RGB and Z, but we should be careful to obtain two
-			// distinct interfaces just in case. Make sure to cast to the interface object type you need
-			ImageCapabilitiesRGB = static_cast<livescene::DeviceCapabilitiesImage *> (genericDevice->requestCapabilityInterface("IMAGE_RGB"));
-			ImageCapabilitiesZ = static_cast<livescene::DeviceCapabilitiesImage *> (genericDevice->requestCapabilityInterface("IMAGE_Z"));
-		} // if
+		// Now that we have the device, we need to ask it for an interface that performs the
+		// operations we want from it. Here all we ask for is the RGB and Z image grabbing.
+		// Kinect supports many other interfaces, not all of which may be implemented by it, or other devices
+		//
+		// On Kinect, same interface will provide RGB and Z, but we should be careful to obtain two
+		// distinct interfaces just in case. Make sure to cast to the interface object type you need
+		// also, make sure to release the interface at the end when you're done with it
+		ImageCapabilitiesRGB = static_cast<livescene::DeviceCapabilitiesImage *> (genericDevice->requestCapabilityInterface("IMAGE_RGB"));
+		ImageCapabilitiesZ = static_cast<livescene::DeviceCapabilitiesImage *> (genericDevice->requestCapabilityInterface("IMAGE_Z"));
 	} // if
 
 
@@ -110,22 +136,29 @@ int main()
 
     while( !viewer.done() )
     {
+		// these are the objects that image data is stored into
 		livescene::Image imageRGB(NominalFrameW, NominalFrameH, 3, livescene::VIDEO_RGB);
 		livescene::Image imageZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT);
-		if(ImageCapabilitiesRGB)
+
+		if(ImageCapabilitiesRGB) // make sure the interface is available
 		{
 			ImageCapabilitiesRGB->getImageSync(imageRGB);
 		} // if
-		if(ImageCapabilitiesZ)
+		if(ImageCapabilitiesZ) // make sure the interface is available
 		{
 			ImageCapabilitiesZ->getImageSync(imageZ);
 		} // if
 
+		// the images returned by getImage*() are non-persistent -- the data buffer in them
+		// belongs to the Device, and will get overwritten during the next getImage*() call
+		// You can use the copy constructor below to make a persistant copy of the Image with
+		// its own allocated data block that nobody else will mess with
 		livescene::Image persistentImageRGB(imageRGB, true); // try making a persistent copy
 
-        image->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
+        // jam that persistent image data into a texture for display
+		image->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
             GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(persistentImageRGB.getData()), osg::Image::NO_DELETE );
-		// <<<>>> do something with the Z value
+		// here you might do something with the Z value
 
         viewer.frame();
     }
