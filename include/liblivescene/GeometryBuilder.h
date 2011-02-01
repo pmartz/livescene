@@ -30,16 +30,21 @@ public:
 	} GeometryEntityType;
 
 	Geometry() : _vertices(0), _indices(0), _normals(0), _texcoord(0), _entityType(GEOMETRY_UNKNOWN),
-		_numVertices(0), _numIndices(0), _numNormals(0), _numTexCoords(0) {}
+		_numVertices(0), _numIndices(0), _numNormals(0), _numTexCoords(0), _width(0), _height(0) {}
 	~Geometry();
 
 	short *getVertices(void) const {return(_vertices);}
 	unsigned int *getIndices(void) const {return(_indices);}
+	float *getNormals(void) const {return(_normals);}
+	float *getTexCoord(void) const {return(_texcoord);}
 
 	unsigned int getNumVertices(void) const {return(_numVertices);}
 	unsigned int getNumIndices(void) const {return(_numIndices);}
 	unsigned int getNumNormals(void) const {return(_numNormals);}
 	unsigned int getNumTexCoords(void) const {return(_numTexCoords);}
+
+	int getWidth(void) const {return(_width);}
+	int getHeight(void) const {return(_height);}
 
 	GeometryEntityType getEntityType(void) const {return(_entityType);}
 
@@ -55,6 +60,7 @@ private:
 	unsigned int *_indices;
 	float *_normals;
 	float *_texcoord;
+	int _width, _height;
 	GeometryEntityType _entityType;
 
 	unsigned int _numVertices, _numIndices, _numNormals, _numTexCoords;
