@@ -53,6 +53,7 @@ class LIVESCENE_EXPORT Image
 		/** Depth is the number of bytes per pixel, not actual number of bits utilized per pixel */
 		int getDepth(void) const {return(_depth);}
 		VideoFormat getFormat(void) const {return(_format);}
+		int getSamples(void) const {return(getWidth() * getHeight());}
 		int getImageBytes(void) const {return(getWidth() * getHeight() * getDepth());}
 		unsigned long getTimestamp(void) const {return(_timestamp);}
 		void setTimestamp(const unsigned long Timestamp) {_timestamp = Timestamp;}
