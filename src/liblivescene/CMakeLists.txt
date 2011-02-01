@@ -14,6 +14,7 @@ set( LIB_PUBLIC_HEADERS
     ${HEADER_PATH}/Device.h
     ${HEADER_PATH}/DeviceManager.h
     ${HEADER_PATH}/Image.h
+    ${HEADER_PATH}/UserInteraction.h
     ${HEADER_PATH}/Export.h
     ${HEADER_PATH}/Version.h
 )
@@ -24,6 +25,7 @@ set( _livesceneSourceFiles
     DeviceFreenect.cpp
     DeviceManager.cpp
     Image.cpp
+    UserInteraction.cpp
     Version.cpp
 )
 
