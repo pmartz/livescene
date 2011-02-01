@@ -123,6 +123,7 @@ int main()
 
 	osg::ref_ptr<osg::MatrixTransform> kinectTransform;
 	kinectTransform = livescene::buildOSGGeometryMatrixTransform();
+    kinectTransform->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
 	viewer.setSceneData(kinectTransform);
 
 	bool oneShot(false);
