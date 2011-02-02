@@ -55,25 +55,42 @@ public:
 };
 
 
-static const int NominalFrameW = 640, NominalFrameH = 480;
+static const int nominalFrameW = 640, nominalFrameH = 480;
 
 
 osg::Node* createScene( osg::Texture2D* tex )
 {
+    osg::ref_ptr< osg::Group > root = new osg::Group;
+
+    root->addChild( osgDB::readNodeFile( "cow.osg" ) );
+
+    // HUD Camera
+    osg::ref_ptr< osg::Camera > cam = new osg::Camera;
+    root->addChild( cam.get() );
+
+    cam->setReferenceFrame( osg::Transform::ABSOLUTE_RF );
+    cam->setProjectionMatrix( osg::Matrix::identity() );
+    cam->setViewMatrix( osg::Matrix::identity() );
+    cam->setRenderOrder( osg::Camera::PRE_RENDER );
+    cam->setAllowEventFocus( false );
+
     osg::ref_ptr< osg::Geode > geode = new osg::Geode;
+    cam->addChild( geode.get() );
+
 #ifdef OSGWORKS_FOUND
-    geode->addDrawable( osgwTools::makePlane( osg::Vec3( -1., 0., -1. ),
-        osg::Vec3( NominalFrameW, 0., 0. ), osg::Vec3( 0., 0., -NominalFrameH ) ) );
+    geode->addDrawable( osgwTools::makePlane( osg::Vec3( -1., 0., 0. ),
+        osg::Vec3( 1., 0., 0. ), osg::Vec3( 0., -1., 0. ) ) );
 #else
-    geode->addDrawable( osg::createTexturedQuadGeometry( osg::Vec3( -1., 0., -1. ),
-        osg::Vec3( 2., 0., 0. ), osg::Vec3( 0., 0., 2. ) ) );
+    geode->addDrawable( osg::createTexturedQuadGeometry( osg::Vec3( -1., 0., 0. ),
+        osg::Vec3( 1., 0., 0. ), osg::Vec3( 0., -1., 0. ) ) );
 #endif
 
     osg::StateSet* stateSet = geode->getOrCreateStateSet();
     stateSet->setTextureAttributeAndModes( 0, tex );
     stateSet->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
+    stateSet->setMode( GL_DEPTH_TEST, osg::StateAttribute::OFF );
 
-    return( geode.release() );
+    return( root.release() );
 }
 
 
@@ -124,11 +141,12 @@ int main()
     osg::ref_ptr< osg::Texture2D > tex = new osg::Texture2D;
     tex->setDataVariance( osg::Object::DYNAMIC );
     tex->setResizeNonPowerOfTwoHint( false );
-    tex->setTextureSize( NominalFrameW, NominalFrameH );
+    tex->setTextureSize( nominalFrameW, nominalFrameH );
     tex->setImage( image.get() );
 
 
     osgViewer::Viewer viewer;
+    viewer.getCamera()->setClearMask( 0 ); // HUD pre render cam clear the framebuffer.
     viewer.addEventHandler( new osgViewer::StatsHandler() );
     viewer.setThreadingModel( osgViewer::ViewerBase::SingleThreaded );
     viewer.setUpViewInWindow( 30, 30, 800, 600 );
@@ -136,7 +154,7 @@ int main()
 
     osgGA::TrackballManipulator* tbm = new osgGA::TrackballManipulator();
     viewer.setCameraManipulator( tbm );
-    viewer.addEventHandler( new TestEventHandler() );
+    //viewer.addEventHandler( new TestEventHandler() );
 
     // Create an instance of the UserInteraction object.
     viewer.realize();
@@ -146,8 +164,8 @@ int main()
 
     while( !viewer.done() )
     {
-        livescene::Image imageRGB(NominalFrameW, NominalFrameH, 3, livescene::VIDEO_RGB);
-        livescene::Image imageZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT);
+        livescene::Image imageRGB( nominalFrameW, nominalFrameH, 3, livescene::VIDEO_RGB );
+        livescene::Image imageZ( nominalFrameW, nominalFrameH, 2, livescene::DEPTH_10BIT );
         imageCapabilitiesRGB->getImageSync(imageRGB);
         imageCapabilitiesZ->getImageSync(imageZ);
 
@@ -156,7 +174,7 @@ int main()
 
         livescene::Image persistentImageRGB(imageRGB, true); // try making a persistent copy
 
-        image->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
+        image->setImage( nominalFrameW, nominalFrameH, 0, GL_RGB,
             GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(persistentImageRGB.getData()), osg::Image::NO_DELETE );
 
         viewer.frame();

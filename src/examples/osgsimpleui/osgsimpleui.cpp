@@ -28,40 +28,13 @@ osg::Node* createScene( osg::Texture2D* tex )
     osg::ref_ptr< osg::Geode > geode = new osg::Geode;
     osg::Geometry* geom = new osg::Geometry;
 
-    osg::Vec3Array* v = new osg::Vec3Array;
-    osg::Vec2Array* tc = new osg::Vec2Array;
-
 #ifdef OSGWORKS_FOUND
-    geom = osgwTools::makePlane( osg::Vec3( -1., 0., -1. ),
-        osg::Vec3( 2., 0., 0. ), osg::Vec3( 0., 0., 2. ) );
-
-    // It's a tri strip
-    (*v).push_back( osg::Vec3( 0., 0., 0. ) );
-    (*v).push_back( osg::Vec3( 640., 0., 0. ) );
-    (*v).push_back( osg::Vec3( 0., 480., 0. ) );
-    (*v).push_back( osg::Vec3( 640., 480., 0. ) );
-
-    (*tc).push_back( osg::Vec2( 0., 1. ) );
-    (*tc).push_back( osg::Vec2( 1., 1. ) );
-    (*tc).push_back( osg::Vec2( 0., 0. ) );
-    (*tc).push_back( osg::Vec2( 1., 0. ) );
+    geom = osgwTools::makePlane( osg::Vec3( 0., 480., 0. ),
+        osg::Vec3( 640., 0., 0. ), osg::Vec3( 0., -480., 0. ) );
 #else
-    geom = osg::createTexturedQuadGeometry( osg::Vec3( -1., 0., -1. ),
-        osg::Vec3( 2., 0., 0. ), osg::Vec3( 0., 0., 2. ) );
-
-    // It's a quad
-    (*v).push_back( osg::Vec3( 0., 0., 0. ) );
-    (*v).push_back( osg::Vec3( 640., 0., 0. ) );
-    (*v).push_back( osg::Vec3( 640., 480., 0. ) );
-    (*v).push_back( osg::Vec3( 0., 480., 0. ) );
-
-    (*tc).push_back( osg::Vec2( 0., 1. ) );
-    (*tc).push_back( osg::Vec2( 1., 1. ) );
-    (*tc).push_back( osg::Vec2( 1., 0. ) );
-    (*tc).push_back( osg::Vec2( 0., 0. ) );
+    geom = osg::createTexturedQuadGeometry( osg::Vec3( 0., 480., -1. ),
+        osg::Vec3( 640., 0., 0. ), osg::Vec3( 0., -480., 0. ) );
 #endif
-    geom->setVertexArray( v );
-    geom->setTexCoordArray( 0, tc );
 
     geode->addDrawable( geom );
 
