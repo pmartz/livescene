@@ -26,13 +26,43 @@ void UserInteraction::detectAndSendEvents( const livescene::Image& imageRGB, con
 {
     InteractorContainer newInteractors;
 
-    // TBD callback
-    defaultDetection( newInteractors, imageRGB, imageZ );
+    if( _detectionCallback.valid() )
+        (*_detectionCallback)( this, newInteractors, imageRGB, imageZ );
+    else
+        defaultDetection( newInteractors, imageRGB, imageZ );
 
-    // TBD callback
-    defaultSendEvents( _interactors, newInteractors );
+    if( _sendEventsCallback.valid() )
+        (*_sendEventsCallback)( this, _interactors, newInteractors );
+    else
+        defaultSendEvents( _interactors, newInteractors );
 
     _interactors = newInteractors;
+}
+
+void UserInteraction::setDetectionCallback( DetectionCallback* callback )
+{
+    _detectionCallback = callback;
+}
+UserInteraction::DetectionCallback* UserInteraction::getDetectionCallback()
+{
+    return( _detectionCallback.get() );
+}
+const UserInteraction::DetectionCallback* UserInteraction::getDetectionCallback() const
+{
+    return( _detectionCallback.get() );
+}
+
+void UserInteraction::setSendEventsCallback( SendEventsCallback* callback )
+{
+    _sendEventsCallback = callback;
+}
+UserInteraction::SendEventsCallback* UserInteraction::getSendEventsCallback()
+{
+    return( _sendEventsCallback.get() );
+}
+const UserInteraction::SendEventsCallback* UserInteraction::getSendEventsCallback() const
+{
+    return( _sendEventsCallback.get() );
 }
 
 void UserInteraction::defaultDetection( InteractorContainer& interactors, const livescene::Image& imageRGB, const livescene::Image& imageZ )
