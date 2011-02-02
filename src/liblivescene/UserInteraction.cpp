@@ -80,8 +80,28 @@ void UserInteraction::defaultDetection( InteractorContainer& interactors, const 
         {
             if( *ptr < minVal )
             {
-                minVal = *ptr;
-                minLoc.set( sdx, tdx );
+                // Sometimes get spurious sudden changes in z, 300-400 units closer
+                // to the Kinect. Tried sampling corners of a 4x4 square but saw _all_
+                // those sample points jump closer. Now sampling corners of a 8x8
+                // square instead, and that seems to filter out this problem.
+                if( ( sdx < ( width - 8 ) ) &&
+                    ( tdx < ( height - 8 ) ) )
+                {
+                    unsigned short sample1 = *( ptr + 7 );
+                    unsigned short sample2 = *( ptr + (width * 7) );
+                    unsigned short sample3 = *( ptr + (width * 7) + 7 );
+                    unsigned short targetDistance = (*ptr) * 1.1; // 110%
+                    if( ( sample1 < targetDistance ) &&
+                        ( sample2 < targetDistance ) &&
+                        ( sample3 < targetDistance ) )
+                    {
+                        minVal = *ptr;
+                        ptr += ( (width * 7) + 7 ); // scan past the vertices we just sampled.
+                        minLoc.set( sdx, tdx );
+                        sdx += 7;
+                        tdx += 7;
+                    }
+                }
             }
             ptr++;
         }
@@ -137,7 +157,7 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
                 }
                 else
                 {
-                    // In OSG, mouse seems to generate a DRAG just before PUSH.
+                    // In OSG, mouse seems to generate a DRAG just before RELEASE.
                     _window.getEventQueue()->mouseMotion( x, y );
                     //std::cout << " * RELEASE " << current._location;
                     //std::cout << " " << x << ", " << y << std::endl;
@@ -161,7 +181,7 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
                 current._age = 0;
             }
         }
-        else
+        else if( current._active )
         {
             // It's a new Interactor. Generate a PUSH event.
             float x, y;
