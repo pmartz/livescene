@@ -69,6 +69,16 @@ osg::Node* createScene( osg::Texture2D* tex )
     root->addChild( cam.get() );
 
     cam->setReferenceFrame( osg::Transform::ABSOLUTE_RF );
+#if( OSGWORKS_OSG_VERSION >= 20910 )
+    // Not sure when this change took place, so the check against 2.9.10
+    // might need to be refined.
+    // Parent camera clear mask inherits down to child cameras. But we want
+    // child camera (pre_render, so renders first) to do the clearing, and
+    // parent camera to not clear. So we must explicitly set the clear mask.
+    cam->setClearMask( GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT );
+    // In 2.8.3, camera clear mask did not inherit, and the child clear mask
+    // has a default value of depth | clear, so this code isn't necessary in 2.8.3.
+#endif
     cam->setProjectionMatrix( osg::Matrix::identity() );
     cam->setViewMatrix( osg::Matrix::identity() );
     cam->setRenderOrder( osg::Camera::PRE_RENDER );
@@ -146,7 +156,7 @@ int main()
 
 
     osgViewer::Viewer viewer;
-    viewer.getCamera()->setClearMask( 0 ); // HUD pre render cam clear the framebuffer.
+    viewer.getCamera()->setClearMask( 0 ); // The HUD pre_render cam clears the framebuffer.
     viewer.addEventHandler( new osgViewer::StatsHandler() );
     viewer.setThreadingModel( osgViewer::ViewerBase::SingleThreaded );
     viewer.setUpViewInWindow( 30, 30, 800, 600 );
