@@ -57,41 +57,79 @@ void UserInteraction::defaultDetection( InteractorContainer& interactors, const 
         }
     }
 
+    const unsigned short threashold( 600 );
+
     Interactor newInteractor;
     newInteractor._name = "single hand";
     newInteractor._id = 121;
     newInteractor._location = minLoc;
-    newInteractor._active = true;
+    newInteractor._distance = minVal;
+    newInteractor._active = ( minVal < threashold );
     interactors.push_back( newInteractor );
 }
 
-void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, const InteractorContainer& newInteractors )
+void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, InteractorContainer& newInteractors )
 {
+    // TBD hardcoded value.
+    const int mouseButton( 1 );
+
     // Make a local copy of the const set of last Interactors.
     InteractorContainer old = lastInteractors;
 
-    InteractorContainer::const_iterator itr;
+    InteractorContainer::iterator itr;
     for( itr=newInteractors.begin(); itr != newInteractors.end(); itr++ )
     {
-        const Interactor& current = *itr;
+        Interactor& current = *itr;
         int prevIdx = getIndexByID( current._id, lastInteractors );
         if( prevIdx >= 0 )
         {
             // It's an existing Interactor. Generate a DRAG event.
+            // Or generate a RELEASE event if current not active and previous was active.
+            // Or generate a PUSH event if current active and previous not active.
 
             // We found this interactor. Take it off the 'old' list.
             // Interactors remaining on the 'old' list will generate RELEASE events.
             eraseByIndex( prevIdx, old );
 
             Interactor& previous = lastInteractors[ prevIdx ];
-            previous._location = current._location;
+            current._age = previous._age+1;
 
             float x, y;
             transformMouse( x, y, current._location.x(), current._location.y() );
-
-            std::cout << "DRAG " << current._location;
-            std::cout << " " << x << ", " << y << std::endl;
-            _window.getEventQueue()->mouseMotion( x, y );
+ 
+            if( previous._active && !( current._active ) )
+            {
+                unsigned int punchMaxAge( 8 );
+                if( current._age < punchMaxAge )
+                {
+                    _window.getEventQueue()->keyPress( ' ' );
+                    _window.getEventQueue()->keyRelease( ' ' );
+                }
+                else
+                {
+                    // In OSG, mouse seems to generate a DRAG just before PUSH.
+                    _window.getEventQueue()->mouseMotion( x, y );
+                    //std::cout << " * RELEASE " << current._location;
+                    //std::cout << " " << x << ", " << y << std::endl;
+                    _window.getEventQueue()->mouseButtonRelease( x, y, mouseButton );
+                }
+            }
+            else if( current._active && !( previous._active ) )
+            {
+                //std::cout << " * PUSH " << current._location;
+                //std::cout << " " << x << ", " << y << std::endl;
+                _window.getEventQueue()->mouseButtonPress( x, y, mouseButton );
+            }
+            else if( current._active && previous._active )
+            {
+                //std::cout << "DRAG " << current._location;
+                //std::cout << " " << x << ", " << y << std::endl;
+                _window.getEventQueue()->mouseMotion( x, y );
+            }
+            if( !current._active )
+            {
+                current._age = 0;
+            }
         }
         else
         {
@@ -99,10 +137,9 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, c
             float x, y;
             transformMouse( x, y, current._location.x(), current._location.y() );
 
-            std::cout << "PUSH " << current._location;
-            std::cout << " " << x << ", " << y << std::endl;
-            // TBD hardcoded left button.
-            _window.getEventQueue()->mouseButtonPress( x, y, 1 );
+            //std::cout << "PUSH " << current._location;
+            //std::cout << " " << x << ", " << y << std::endl;
+            _window.getEventQueue()->mouseButtonPress( x, y, mouseButton );
         }
     }
 
@@ -114,10 +151,9 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, c
         float x, y;
         transformMouse( x, y, current._location.x(), current._location.y() );
 
-        std::cout << "RELEASE " << current._location;
-        std::cout << " " << x << ", " << y << std::endl;
-        // TBD hardcoded left button.
-        _window.getEventQueue()->mouseButtonRelease( x, y, 1 );
+        //std::cout << "RELEASE " << current._location;
+        //std::cout << " " << x << ", " << y << std::endl;
+        _window.getEventQueue()->mouseButtonRelease( x, y, mouseButton );
     }
 
     osgGA::EventQueue* eq = _window.getEventQueue();
@@ -193,9 +229,17 @@ bool UserInteraction::eraseByIndex( const unsigned int index, InteractorContaine
 
 void UserInteraction::transformMouse( float& x, float& y, unsigned short devX, unsigned short devY )
 {
+    int xOrigin, yOrigin, width, height;
+    _window.getWindowRectangle( xOrigin, yOrigin, width, height );
+
     // TBD hardcoded values.
-    x = (float)devX;
-    y = (float)devY;
+    float scaleX = (float)width / 640.f;
+    float scaleY = (float)height / 480.f;
+
+    // Arm to left appears in camera right, so flip x values.
+    unsigned short flippedX = 640 - devX;
+    x = (float)flippedX * scaleX;
+    y = (float)devY * scaleY;
 }
 
 

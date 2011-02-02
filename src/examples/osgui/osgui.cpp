@@ -34,12 +34,20 @@ public:
             std::cout << ea.getX() << ", " << ea.getY() << std::endl;
             break;
         case osgGA::GUIEventAdapter::DRAG:
-            std::cout << "Got DRAG  ";
-            std::cout << ea.getX() << ", " << ea.getY() << std::endl;
+            //std::cout << "Got DRAG  ";
+            //std::cout << ea.getX() << ", " << ea.getY() << std::endl;
             break;
         case osgGA::GUIEventAdapter::RELEASE:
             std::cout << "Got RELEASE  ";
             std::cout << ea.getX() << ", " << ea.getY() << std::endl;
+            break;
+        case osgGA::GUIEventAdapter::KEYDOWN:
+            std::cout << "Got KEYDOWN  ";
+            std::cout << ea.getKey() << std::endl;
+            break;
+        case osgGA::GUIEventAdapter::KEYUP:
+            std::cout << "Got KEYUP  ";
+            std::cout << ea.getKey() << std::endl;
             break;
         }
         return( handled );

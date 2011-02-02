@@ -79,7 +79,7 @@ protected:
     Interactors that no longer exist generate RELEASE events.
     More TBD.
     */
-    LIVESCENE_EXPORT void defaultSendEvents( InteractorContainer& lastInteractors, const InteractorContainer& newInteractors );
+    LIVESCENE_EXPORT void defaultSendEvents( InteractorContainer& lastInteractors, InteractorContainer& newInteractors );
 
     InteractorContainer _interactors;
     osgViewer::GraphicsWindow& _window;
