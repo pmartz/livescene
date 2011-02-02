@@ -53,20 +53,24 @@ public:
     */
     LIVESCENE_EXPORT void defaultDetection( InteractorContainer& interactors, const livescene::Image& imageRGB, const livescene::Image& imageZ );
 
-    struct DetectionCallback : public osg::Object
+    struct LIVESCENE_EXPORT DetectionCallback : public osg::Object
     {
     public:
         DetectionCallback() {}
+        DetectionCallback( const DetectionCallback&, const osg::CopyOp& copyop=osg::CopyOp::SHALLOW_COPY ) {}
         virtual ~DetectionCallback() {}
+        META_Object(livescene,DetectionCallback);
 
-        virtual void operator()( UserInteraction* ui, InteractorContainer& interactors, const livescene::Image& imageRGB, const livescene::Image& imageZ )
+        virtual void operator()( livescene::UserInteraction* ui,
+            livescene::UserInteraction::InteractorContainer& interactors,
+            const livescene::Image& imageRGB, const livescene::Image& imageZ )
         {
             ui->defaultDetection( interactors, imageRGB, imageZ );
         }
     };
-    void setDetectionCallback( DetectionCallback* callback );
-    DetectionCallback* getDetectionCallback();
-    const DetectionCallback* getDetectionCallback() const;
+    LIVESCENE_EXPORT void setDetectionCallback( DetectionCallback* callback );
+    LIVESCENE_EXPORT DetectionCallback* getDetectionCallback();
+    LIVESCENE_EXPORT const DetectionCallback* getDetectionCallback() const;
 
     /** \brief Generates user interface events.
     Compares \c newInteractors to \c lastInteractors to generate events.
@@ -76,20 +80,24 @@ public:
     */
     LIVESCENE_EXPORT void defaultSendEvents( InteractorContainer& lastInteractors, InteractorContainer& newInteractors );
 
-    struct SendEventsCallback : public osg::Object
+    struct LIVESCENE_EXPORT SendEventsCallback : public osg::Object
     {
     public:
         SendEventsCallback() {}
+        SendEventsCallback( const SendEventsCallback&, const osg::CopyOp& copyop=osg::CopyOp::SHALLOW_COPY ) {}
         virtual ~SendEventsCallback() {}
+        META_Object(livescene,SendEventsCallback);
 
-        virtual void operator()( UserInteraction* ui, InteractorContainer& lastInteractors, InteractorContainer& newInteractors )
+        virtual void operator()( livescene::UserInteraction* ui,
+            livescene::UserInteraction::InteractorContainer& lastInteractors,
+            livescene::UserInteraction::InteractorContainer& newInteractors )
         {
             ui->defaultSendEvents( lastInteractors, newInteractors );
         }
     };
-    void setSendEventsCallback( SendEventsCallback* callback );
-    SendEventsCallback* getSendEventsCallback();
-    const SendEventsCallback* getSendEventsCallback() const;
+    LIVESCENE_EXPORT void setSendEventsCallback( SendEventsCallback* callback );
+    LIVESCENE_EXPORT SendEventsCallback* getSendEventsCallback();
+    LIVESCENE_EXPORT const SendEventsCallback* getSendEventsCallback() const;
 
 
 
