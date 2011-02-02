@@ -154,7 +154,7 @@ int main()
 
     osgGA::TrackballManipulator* tbm = new osgGA::TrackballManipulator();
     viewer.setCameraManipulator( tbm );
-    //viewer.addEventHandler( new TestEventHandler() );
+    viewer.addEventHandler( new TestEventHandler() );
 
     // Create an instance of the UserInteraction object.
     viewer.realize();

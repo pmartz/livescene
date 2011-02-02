@@ -100,7 +100,7 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
             if( previous._active && !( current._active ) )
             {
                 unsigned int punchMaxAge( 8 );
-                if( current._age < punchMaxAge )
+                if( ( current._age < punchMaxAge ) && ( current._age > 2 ) )
                 {
                     _window.getEventQueue()->keyPress( ' ' );
                     _window.getEventQueue()->keyRelease( ' ' );
