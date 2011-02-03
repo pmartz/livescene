@@ -21,6 +21,8 @@ namespace livescene {
 
 Read about the multitouch feature commit at this web page.
 http://www.openscenegraph.org/projects/osg/changeset/11934
+An explanation of the OSG interface is here:
+http://forum.openscenegraph.org/viewtopic.php?t=7702
 */
 class UserInteraction
 {
@@ -50,6 +52,7 @@ public:
 
 
     /** \brief Scans the input rgb and z images and returns a list of detected interactors.
+    If you don't specify a DetectionCallback, this function is used to detect interactors.
     */
     LIVESCENE_EXPORT void defaultDetection( InteractorContainer& interactors, const livescene::Image& imageRGB, const livescene::Image& imageZ );
 
@@ -61,6 +64,9 @@ public:
         virtual ~DetectionCallback() {}
         META_Object(livescene,DetectionCallback);
 
+        /** Support for detecting interactors in application code. Add interactors to
+        the \interactors parameter.
+        */
         virtual void operator()( livescene::UserInteraction* ui,
             livescene::UserInteraction::InteractorContainer& interactors,
             const livescene::Image& imageRGB, const livescene::Image& imageZ )
@@ -73,10 +79,11 @@ public:
     LIVESCENE_EXPORT const DetectionCallback* getDetectionCallback() const;
 
     /** \brief Generates user interface events.
+    If you don't set a SendEventsCallback, this function is used to send events.
+
     Compares \c newInteractors to \c lastInteractors to generate events.
     Interactors that did not previously exist generate PUSH events.
     Interactors that no longer exist generate RELEASE events.
-    More TBD.
     */
     LIVESCENE_EXPORT void defaultSendEvents( InteractorContainer& lastInteractors, InteractorContainer& newInteractors );
 
@@ -88,6 +95,10 @@ public:
         virtual ~SendEventsCallback() {}
         META_Object(livescene,SendEventsCallback);
 
+        /** Support for sending events in application code. Compare the list
+        of current interactors to the list of previous interactors, and generate
+        your own events.
+        */
         virtual void operator()( livescene::UserInteraction* ui,
             livescene::UserInteraction::InteractorContainer& lastInteractors,
             livescene::UserInteraction::InteractorContainer& newInteractors )
@@ -99,6 +110,29 @@ public:
     LIVESCENE_EXPORT SendEventsCallback* getSendEventsCallback();
     LIVESCENE_EXPORT const SendEventsCallback* getSendEventsCallback() const;
 
+
+    /** If using the defaultSendEvents, specify the mapping of interactions to events.
+    */
+    enum ContactType {
+        CONTACT_START,
+        MOTION,
+        CONTACT_END,
+        PUNCH
+    };
+    typedef std::map< ContactType, osgGA::GUIEventAdapter::EventType > ContactEventMap;
+
+    LIVESCENE_EXPORT void setContactEventMap( const ContactEventMap& map );
+    LIVESCENE_EXPORT void getContactEventMap( ContactEventMap& map );
+
+    LIVESCENE_EXPORT void setDefaultDetectionThreashold( unsigned short distance );
+    LIVESCENE_EXPORT unsigned short getDefaultDetectionThreashold() const;
+
+    // 1=left, 2=middle, 3=right
+    LIVESCENE_EXPORT void setDefaultSendEventsButton( int button );
+    LIVESCENE_EXPORT int getDefaultSendEventsButton() const;
+
+    LIVESCENE_EXPORT void setDefaultSendEventsPunchMaxAge( unsigned int age );
+    LIVESCENE_EXPORT unsigned int getDefaultSendEventsPunchMaxAge() const;
 
 
     /** Search the list of \c interactors and return the one closest to
@@ -134,6 +168,12 @@ protected:
 
     osg::ref_ptr< DetectionCallback > _detectionCallback;
     osg::ref_ptr< SendEventsCallback > _sendEventsCallback;
+
+    ContactEventMap _eventMap;
+
+    unsigned short _defaultDetectionThreshold;
+    int _defaultSendEventsButton;
+    unsigned int _defaultSendEventsPunchMaxAge;
 };
 
 

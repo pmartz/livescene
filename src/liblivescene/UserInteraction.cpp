@@ -15,7 +15,10 @@ namespace livescene {
 
 
 UserInteraction::UserInteraction( osgViewer::GraphicsWindow& window )
-  : _window( window )
+  : _window( window ),
+    _defaultDetectionThreshold( 600 ),
+    _defaultSendEventsButton( 1 ),
+    _defaultSendEventsPunchMaxAge( 9 )
 {
 }
 UserInteraction::~UserInteraction()
@@ -107,22 +110,17 @@ void UserInteraction::defaultDetection( InteractorContainer& interactors, const 
         }
     }
 
-    const unsigned short threashold( 600 );
-
     Interactor newInteractor;
     newInteractor._name = "single hand";
     newInteractor._id = 121;
     newInteractor._location = minLoc;
     newInteractor._distance = minVal;
-    newInteractor._active = ( minVal < threashold );
+    newInteractor._active = ( minVal < _defaultDetectionThreshold );
     interactors.push_back( newInteractor );
 }
 
 void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, InteractorContainer& newInteractors )
 {
-    // TBD hardcoded value.
-    const int mouseButton( 1 );
-
     osgGA::EventQueue* eq = _window.getEventQueue();
 
     // Make a local copy of the const set of last Interactors.
@@ -151,9 +149,9 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
  
             if( previous._active && !( current._active ) )
             {
-                unsigned int punchMaxAge( 8 );
-                if( ( current._age < punchMaxAge ) && ( current._age > 2 ) )
+                if( current._age < _defaultSendEventsPunchMaxAge )
                 {
+                    // PUNCH event.
                     eq->keyPress( ' ' );
                     eq->keyRelease( ' ' );
                 }
@@ -163,14 +161,14 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
                     eq->mouseMotion( x, y );
                     //std::cout << " * RELEASE " << current._location;
                     //std::cout << " " << x << ", " << y << std::endl;
-                    eq->mouseButtonRelease( x, y, mouseButton );
+                    eq->mouseButtonRelease( x, y, _defaultSendEventsButton );
                 }
             }
             else if( current._active && !( previous._active ) )
             {
                 //std::cout << " * PUSH " << current._location;
                 //std::cout << " " << x << ", " << y << std::endl;
-                eq->mouseButtonPress( x, y, mouseButton );
+                eq->mouseButtonPress( x, y, _defaultSendEventsButton );
             }
             else if( current._active && previous._active )
             {
@@ -191,7 +189,7 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
 
             //std::cout << "PUSH " << current._location;
             //std::cout << " " << x << ", " << y << std::endl;
-            eq->mouseButtonPress( x, y, mouseButton );
+            eq->mouseButtonPress( x, y, _defaultSendEventsButton );
         }
     }
 
@@ -205,8 +203,45 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
 
         //std::cout << "RELEASE " << current._location;
         //std::cout << " " << x << ", " << y << std::endl;
-        eq->mouseButtonRelease( x, y, mouseButton );
+        eq->mouseButtonRelease( x, y, _defaultSendEventsButton );
     }
+}
+
+
+void UserInteraction::setContactEventMap( const ContactEventMap& map )
+{
+    _eventMap = map;
+}
+void UserInteraction::getContactEventMap( ContactEventMap& map )
+{
+    map = _eventMap;
+}
+
+void UserInteraction::setDefaultDetectionThreashold( unsigned short distance )
+{
+    _defaultDetectionThreshold = distance;
+}
+unsigned short UserInteraction::getDefaultDetectionThreashold() const
+{
+    return( _defaultDetectionThreshold );
+}
+
+void UserInteraction::setDefaultSendEventsButton( int button )
+{
+    _defaultSendEventsButton = button;
+}
+int UserInteraction::getDefaultSendEventsButton() const
+{
+    return( _defaultSendEventsButton );
+}
+
+void UserInteraction::setDefaultSendEventsPunchMaxAge( unsigned int age )
+{
+    _defaultSendEventsPunchMaxAge = age;
+}
+unsigned int UserInteraction::getDefaultSendEventsPunchMaxAge() const
+{
+    return( _defaultSendEventsPunchMaxAge );
 }
 
 
