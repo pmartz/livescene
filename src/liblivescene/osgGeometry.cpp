@@ -164,22 +164,40 @@ LIVESCENE_EXPORT osg::MatrixTransform* buildOSGGeometryMatrixTransform(void)
 	return(mt.release());
 #else
 
+    // These values are control parameters that will vary from
+    // one device to the next. Currently putting in values that
+    // closely approximate the Kinect, resulting in a net transform
+    // matrix that is pretty close to the "magic matrix" used in
+    // the OpenKinect project.
+    const bool y0IsUp( true ); // y==0 is at the top in Kinect, so this is true.
     const float width( 640.f );
     const float height( 480.f );
     const float depth( 1024.f ); // assumes 10-bit! Change to 2048 for 11-bit.
-    const float depthValuePerMeter( 500.f ); // TBD a Guess
+    const float depthValuesPerMeter( 500.f ); // TBD a Guess
     const float fovy( 40.f ); // TBD a guess
     const float near( 0.1f ); // TBD a guess
-    const float far( depth / depthValuePerMeter );
+    const float far( depth / depthValuesPerMeter );
 
     // Convert from window coords in range (0,0,0)-(width,height,depth)
     //   to biased NDC space in renage (0,0,0)-(2,2,2)
     osg::Matrix invWindow( osg::Matrix::scale( 2./width, 2./height, 2./depth ) );
-    // Kinect has y=0 at the top, so mirror y.
-    //   The range is now (0,0,0)-(2,-2,2)
-    osg::Matrix yNegativeScale( osg::Matrix::scale( 1., -1., 1. ) );
-    // Translate into NDC space (-1,-1,-1)-(1,1,1)
-    osg::Matrix invNDC( osg::Matrix::translate( -1., 1., -1. ) );
+
+    osg::Matrix yNegativeScale, invNDC;
+    if( y0IsUp )
+    {
+        // Kinect has y=0 at the top, so mirror y.
+        //   The range is now (0,0,0)-(2,-2,2)
+        yNegativeScale = osg::Matrix::scale( 1., -1., 1. );
+        // Translate into NDC space (-1,-1,-1)-(1,1,1)
+        invNDC = osg::Matrix::translate( -1., 1., -1. );
+    }
+    else
+    {
+        // No-op.
+        yNegativeScale = osg::Matrix::identity();
+        // Translate into NDC space (-1,-1,-1)-(1,1,1)
+        invNDC = osg::Matrix::translate( -1., -1., -1. );
+    }
 
     // Create what we think is the projection matrix:
     osg::Matrix proj( osg::Matrix::perspective( fovy, width/height, near, far ) );
