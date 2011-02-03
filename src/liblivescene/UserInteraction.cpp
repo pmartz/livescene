@@ -123,6 +123,8 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
     // TBD hardcoded value.
     const int mouseButton( 1 );
 
+    osgGA::EventQueue* eq = _window.getEventQueue();
+
     // Make a local copy of the const set of last Interactors.
     InteractorContainer old = lastInteractors;
 
@@ -152,29 +154,29 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
                 unsigned int punchMaxAge( 8 );
                 if( ( current._age < punchMaxAge ) && ( current._age > 2 ) )
                 {
-                    _window.getEventQueue()->keyPress( ' ' );
-                    _window.getEventQueue()->keyRelease( ' ' );
+                    eq->keyPress( ' ' );
+                    eq->keyRelease( ' ' );
                 }
                 else
                 {
                     // In OSG, mouse seems to generate a DRAG just before RELEASE.
-                    _window.getEventQueue()->mouseMotion( x, y );
+                    eq->mouseMotion( x, y );
                     //std::cout << " * RELEASE " << current._location;
                     //std::cout << " " << x << ", " << y << std::endl;
-                    _window.getEventQueue()->mouseButtonRelease( x, y, mouseButton );
+                    eq->mouseButtonRelease( x, y, mouseButton );
                 }
             }
             else if( current._active && !( previous._active ) )
             {
                 //std::cout << " * PUSH " << current._location;
                 //std::cout << " " << x << ", " << y << std::endl;
-                _window.getEventQueue()->mouseButtonPress( x, y, mouseButton );
+                eq->mouseButtonPress( x, y, mouseButton );
             }
             else if( current._active && previous._active )
             {
                 //std::cout << "DRAG " << current._location;
                 //std::cout << " " << x << ", " << y << std::endl;
-                _window.getEventQueue()->mouseMotion( x, y );
+                eq->mouseMotion( x, y );
             }
             if( !current._active )
             {
@@ -189,7 +191,7 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
 
             //std::cout << "PUSH " << current._location;
             //std::cout << " " << x << ", " << y << std::endl;
-            _window.getEventQueue()->mouseButtonPress( x, y, mouseButton );
+            eq->mouseButtonPress( x, y, mouseButton );
         }
     }
 
@@ -203,10 +205,8 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
 
         //std::cout << "RELEASE " << current._location;
         //std::cout << " " << x << ", " << y << std::endl;
-        _window.getEventQueue()->mouseButtonRelease( x, y, mouseButton );
+        eq->mouseButtonRelease( x, y, mouseButton );
     }
-
-    osgGA::EventQueue* eq = _window.getEventQueue();
 }
 
 
