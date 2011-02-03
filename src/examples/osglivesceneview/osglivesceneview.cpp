@@ -93,6 +93,7 @@ int main()
     viewer.setUpViewInWindow( 30, 30, 800, 600 );
 	//viewer.setUpViewOnSingleScreen();
 	viewer.getCamera()->setComputeNearFarMode(osgUtil::CullVisitor::DO_NOT_COMPUTE_NEAR_FAR);
+    viewer.getCamera()->setProjectionMatrix( osg::Matrix::perspective( 35., 4./3., .001, 100. ) );
 
     osgGA::TrackballManipulator* tbm = new osgGA::TrackballManipulator();
     viewer.setCameraManipulator( tbm );

@@ -70,7 +70,8 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &g
     {
         // create Geometry object to store all the vertices and points primitive.
         osg::Geometry* pointsGeom = new osg::Geometry();
-        
+
+
         // create a Vec3Array and add to it all my coordinates.
         // Like all the *Array variants (see include/osg/Array) , Vec3Array is derived from both osg::Array 
         // and std::vector<>.  osg::Array's are reference counted and hence sharable,
@@ -135,6 +136,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &g
 
 LIVESCENE_EXPORT osg::MatrixTransform* buildOSGGeometryMatrixTransform(void)
 {
+#if 0
 	// code from libfreenect's glpclview
 
 	// Do the projection from u,v,depth to X,Y,Z directly in an opengl matrix
@@ -160,6 +162,38 @@ LIVESCENE_EXPORT osg::MatrixTransform* buildOSGGeometryMatrixTransform(void)
 							mat[12], mat[13], mat[14], mat[15]);
 	mt->setMatrix(magicVertex);
 	return(mt.release());
+#else
+
+    const float width( 640.f );
+    const float height( 480.f );
+    const float depth( 1024.f ); // assumes 10-bit! Change to 2048 for 11-bit.
+    const float depthValuePerMeter( 500.f ); // TBD a Guess
+    const float fovy( 40.f ); // TBD a guess
+    const float near( 0.1f ); // TBD a guess
+    const float far( depth / depthValuePerMeter );
+
+    // Convert from window coords in range (0,0,0)-(width,height,depth)
+    //   to biased NDC space in renage (0,0,0)-(2,2,2)
+    osg::Matrix invWindow( osg::Matrix::scale( 2./width, 2./height, 2./depth ) );
+    // Kinect has y=0 at the top, so mirror y.
+    //   The range is now (0,0,0)-(2,-2,2)
+    osg::Matrix yNegativeScale( osg::Matrix::scale( 1., -1., 1. ) );
+    // Translate into NDC space (-1,-1,-1)-(1,1,1)
+    osg::Matrix invNDC( osg::Matrix::translate( -1., 1., -1. ) );
+
+    // Create what we think is the projection matrix:
+    osg::Matrix proj( osg::Matrix::perspective( fovy, width/height, near, far ) );
+    // ...and invert it:
+    osg::Matrix invProj( osg::Matrix::inverse( proj ) );
+
+    osg::Matrix matrix = invWindow * yNegativeScale * invNDC * invProj;
+
+	osg::ref_ptr<osg::MatrixTransform> mt = new osg::MatrixTransform;
+	mt->setMatrix( matrix );
+
+	return( mt.release() );
+
+#endif
 } // buildOSGGeometryMatrixTransform
 
 LIVESCENE_EXPORT osg::MatrixTransform* buildOSGTextureMatrixTransform(void)
