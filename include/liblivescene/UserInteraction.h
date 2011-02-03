@@ -124,7 +124,9 @@ public:
     LIVESCENE_EXPORT bool eraseByIndex( const unsigned int index, InteractorContainer& interactors ) const;
 
 
-    void transformMouse( float& x, float& y, unsigned short devX, unsigned short devY );
+    LIVESCENE_EXPORT void transformMouse( float& x, float& y, unsigned short devX, unsigned short devY );
+
+    LIVESCENE_EXPORT osgViewer::GraphicsWindow& getGraphicsWindow() { return( _window ); }
 
 protected:
     InteractorContainer _interactors;
