@@ -61,7 +61,7 @@ bool Background::extractZBackground(const livescene::Image &liveZ, livescene::Im
 	for(int sample = 0; sample < maxSample; sample++)
 	{
 		const int liveZsample = liveZData[sample];
-		const int liveZepsilon = (int)(liveZsample * _discriminationEpsilon); // margin of noise/error
+		const int liveZepsilon = (int)(liveZsample * _discriminationEpsilonPercent); // margin of noise/error
 		// is current sample at, beyond or just in front of known background depth?
 		if(liveZsample + liveZepsilon >= bgZData[sample])
 		{ // it's background
