@@ -5,6 +5,7 @@
 
 #include "liblivescene/Export.h"
 #include "liblivescene/Image.h"
+#include <algorithm>
 
 
 namespace livescene {
@@ -30,7 +31,7 @@ public:
 	} GeometryEntityType;
 
 	Geometry() : _vertices(0), _indices(0), _normals(0), _texcoord(0), _entityType(GEOMETRY_UNKNOWN),
-		_numVertices(0), _numIndices(0), _numNormals(0), _numTexCoords(0), _width(0), _height(0) {}
+		_numVertices(0), _numIndices(0), _numNormals(0), _numTexCoords(0), _width(0), _height(0), _meshEpsilonPercent(.005f) {}
 	~Geometry();
 
 	short *getVertices(void) const {return(_vertices);}
@@ -48,6 +49,12 @@ public:
 
 	GeometryEntityType getEntityType(void) const {return(_entityType);}
 
+	// the mesh epsilon is the amount of z difference tolerated when comparing the candidate Z values
+	// of adjacent samples to see if they can be connected with a mesh. It is expressed as a percent
+	// of the Z value of the samples being compared, since Z precision is presumed to degrade with distance.
+	void setMeshEpsilonPercent(const float meshEpsilonPercent) {_meshEpsilonPercent = meshEpsilonPercent;}
+	float getMeshEpsilonPercent(void) const {return(_meshEpsilonPercent);}
+
 	/** Build point cloud geometry vertex, and optional texcoord arrays from Z buffer, with optional nulling.
 	imageZ is required, imageRGB is optional can can be NULL. Returns NULL for failure. */
 	bool buildPointCloud(const livescene::Image &imageZ, livescene::Image *imageRGB);
@@ -62,14 +69,23 @@ private:
 	float *_texcoord;
 	int _width, _height;
 	int _zNull;
+	float _meshEpsilonPercent;
 	GeometryEntityType _entityType;
 
 	unsigned int _numVertices, _numIndices, _numNormals, _numTexCoords;
 
 	void freeData(void);
-	void allocData(unsigned int numVert, unsigned int numId, unsigned int numTex, unsigned int numNorm);
+	void allocData(const unsigned int &numVert, const unsigned int &numId, const unsigned int &numTex, const unsigned int &numNorm);
 
-	inline bool isCellValueValid(short value) {return(value != _zNull && value != 0);}
+	inline bool isCellValueValid(const short &value) {return(value != _zNull && value != 0);}
+	inline bool isTriRangeMeshable(const short &valueA, const short &valueB, const short &valueC)
+	{
+		short delta = (short)((float)valueA * _meshEpsilonPercent);
+		short maxZ = std::max(std::max(valueA, valueB), valueC);
+		short minZ = std::min(std::min(valueA, valueB), valueC);
+		if(maxZ - minZ <= delta) return(true);
+		else return(false);
+	}
 
 }; // Geometry
 

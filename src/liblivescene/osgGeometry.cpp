@@ -50,6 +50,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &g
     geode = new osg::Geode();
 
     // create POINTS
+	if(geometry.getEntityType() == livescene::Geometry::GEOMETRY_POINTS)
     {
         // create Geometry object to store all the vertices and points primitive.
         osg::Geometry* pointsGeom = new osg::Geometry();
@@ -125,6 +126,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &geo
     geode = new osg::Geode();
 
     // create TRIANGLES
+	if(geometry.getEntityType() == livescene::Geometry::GEOMETRY_FACES)
     {
         // create Geometry object to store all the vertices and points primitive.
         osg::Geometry* pointsGeom = new osg::Geometry();

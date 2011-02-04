@@ -17,7 +17,7 @@ void Geometry::freeData(void)
 	delete [] _texcoord; _texcoord = 0;
 } // Geometry::freeData
 
-void Geometry::allocData(unsigned int numVert, unsigned int numId, unsigned int numTex, unsigned int numNorm)
+void Geometry::allocData(const unsigned int &numVert, const unsigned int &numId, const unsigned int &numTex, const unsigned int &numNorm)
 {
 	freeData();
 	_vertices = new short[numVert * 3]; // three shorts per vert
@@ -29,6 +29,7 @@ void Geometry::allocData(unsigned int numVert, unsigned int numId, unsigned int 
 
 bool Geometry::buildPointCloud(const livescene::Image &imageZ, livescene::Image *imageRGB)
 {
+	_entityType = GEOMETRY_POINTS;
 	_width = imageZ.getWidth();
 	_height = imageZ.getHeight();
 
@@ -80,6 +81,7 @@ bool Geometry::buildPointCloud(const livescene::Image &imageZ, livescene::Image 
 
 bool Geometry::buildFaces(const livescene::Image &imageZ, livescene::Image *imageRGB)
 {
+	_entityType = GEOMETRY_FACES;
 	_width = imageZ.getWidth();
 	_height = imageZ.getHeight();
 
@@ -118,35 +120,40 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, livescene::Image *imag
 			const unsigned int loopSub = line * width + column;
 			const float columnTC = (float)column / (float)width;
 			const float columnPlusOneTC = (float)(column + 1) / (float)width;
-			short originalDepth = depthBuffer[loopSub];
+			// preread these four since we'll need them repeatedly
+			short depthUL = depthBuffer[loopSub];
+			short depthUR = depthBuffer[line * width + column + 1];
+			short depthLL = depthBuffer[(line + 1)* width + column];
+			short depthLR = depthBuffer[(line + 1)* width + column + 1];
 			// is top-left sample of mesh cell (at loop subscripts) non-rejected?
-			if(isCellValueValid(originalDepth))
+			if(isCellValueValid(depthUL))
 			{
 				// is LR vertex valid, allowing for potentially both polygons split UL<->LR?
-				if(isCellValueValid(depthBuffer[(line + 1)* width + column + 1]))
+				if(isCellValueValid(depthLR))
 				{ // try to form two triangles, UL, LL, LR and UL, LR, UR
 					// is LL valid, allowing UL, LL, LR?
-					if(isCellValueValid(depthBuffer[(line + 1)* width + column]))
+					if(isCellValueValid(depthLL)
+						&& isTriRangeMeshable(depthUL, depthLL, depthLR))
 					{
 						// form UL, LL, LR triangle
 						// UL
 						_vertices[vertSub++] = column;
 						_vertices[vertSub++] = line;
-						_vertices[vertSub++] = originalDepth;
+						_vertices[vertSub++] = depthUL;
 						_texcoord[texSub++] = columnTC; // X
 						_texcoord[texSub++] = lineTC; // Y
 						indexSub++;
 						// LL
 						_vertices[vertSub++] = column;
 						_vertices[vertSub++] = line + 1;
-						_vertices[vertSub++] = depthBuffer[(line + 1)* width + column];
+						_vertices[vertSub++] = depthLL;
 						_texcoord[texSub++] = columnTC; // X
 						_texcoord[texSub++] = linePlusOneTC; // Y
 						indexSub++;
 						// LR
 						_vertices[vertSub++] = column + 1;
 						_vertices[vertSub++] = line + 1;
-						_vertices[vertSub++] = depthBuffer[(line + 1)* width + column + 1];
+						_vertices[vertSub++] = depthLR;
 						_texcoord[texSub++] = columnPlusOneTC; // X
 						_texcoord[texSub++] = linePlusOneTC; // Y
 						indexSub++;
@@ -155,27 +162,28 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, livescene::Image *imag
 					} // if
 					
 					// is UR valid, allowing UL, LR, UR?
-					if(isCellValueValid(depthBuffer[line * width + column + 1]))
+					if(isCellValueValid(depthUR)
+						&& isTriRangeMeshable(depthUL, depthLR, depthUR))
 					{
 						// form UL, LR, UR triangle
 						// UL
 						_vertices[vertSub++] = column;
 						_vertices[vertSub++] = line;
-						_vertices[vertSub++] = originalDepth;
+						_vertices[vertSub++] = depthUL;
 						_texcoord[texSub++] = columnTC; // X
 						_texcoord[texSub++] = lineTC; // Y
 						indexSub++;
 						// LR
 						_vertices[vertSub++] = column + 1;
 						_vertices[vertSub++] = line + 1;
-						_vertices[vertSub++] = depthBuffer[(line + 1)* width + column + 1];
+						_vertices[vertSub++] = depthLR;
 						_texcoord[texSub++] = columnPlusOneTC; // X
 						_texcoord[texSub++] = linePlusOneTC; // Y
 						indexSub++;
 						// UR
 						_vertices[vertSub++] = column + 1;
 						_vertices[vertSub++] = line;
-						_vertices[vertSub++] = depthBuffer[line * width + column + 1];
+						_vertices[vertSub++] = depthUR;
 						_texcoord[texSub++] = columnPlusOneTC; // X
 						_texcoord[texSub++] = lineTC; // Y
 						indexSub++;
@@ -184,28 +192,28 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, livescene::Image *imag
 					} // if
 				} // if
 				// are at least UR and LL left valid, allowing one UL, LL, UR?
-				else if(isCellValueValid(depthBuffer[(line + 1)* width + column])
-					&& isCellValueValid(depthBuffer[line * width + column + 1]))
+				else if(isCellValueValid(depthLL) && isCellValueValid(depthUR)
+					&& isTriRangeMeshable(depthUL, depthLL, depthUR))
 				{
 					// form UL, LL, UR triangle
 					// UL
 					_vertices[vertSub++] = column;
 					_vertices[vertSub++] = line;
-					_vertices[vertSub++] = originalDepth;
+					_vertices[vertSub++] = depthUL;
 					_texcoord[texSub++] = columnTC; // X
 					_texcoord[texSub++] = lineTC; // Y
 					indexSub++;
 					// LL
 					_vertices[vertSub++] = column;
 					_vertices[vertSub++] = line + 1;
-					_vertices[vertSub++] = depthBuffer[(line + 1)* width + column];
+					_vertices[vertSub++] = depthLL;
 					_texcoord[texSub++] = columnTC; // X
 					_texcoord[texSub++] = linePlusOneTC; // Y
 					indexSub++;
 					// UR
 					_vertices[vertSub++] = column + 1;
 					_vertices[vertSub++] = line;
-					_vertices[vertSub++] = depthBuffer[line * width + column + 1];
+					_vertices[vertSub++] = depthUR;
 					_texcoord[texSub++] = columnPlusOneTC; // X
 					_texcoord[texSub++] = lineTC; // Y
 					indexSub++;
@@ -214,29 +222,28 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, livescene::Image *imag
 				} // else if
 			} // if
 			// we still might make a triangle out of UR, LR, LL if all are valid even if UL is NULL
-			else if(isCellValueValid(depthBuffer[(line + 1)* width + column])
-			 && isCellValueValid(depthBuffer[line * width + column + 1])
-			 && isCellValueValid(depthBuffer[(line + 1)* width + column + 1]) )
+			else if(isCellValueValid(depthLL) && isCellValueValid(depthUR) && isCellValueValid(depthLR)
+				&& isTriRangeMeshable(depthLL, depthUR, depthLR))
 			{
 				// form LL, UR, LR triangle
 				// LL
 				_vertices[vertSub++] = column;
 				_vertices[vertSub++] = line + 1;
-				_vertices[vertSub++] = depthBuffer[(line + 1)* width + column];
+				_vertices[vertSub++] = depthLL;
 				_texcoord[texSub++] = columnTC; // X
 				_texcoord[texSub++] = linePlusOneTC; // Y
 				indexSub++;
 				// UR
 				_vertices[vertSub++] = column + 1;
 				_vertices[vertSub++] = line;
-				_vertices[vertSub++] = depthBuffer[line * width + column + 1];
+				_vertices[vertSub++] = depthUR;
 				_texcoord[texSub++] = columnPlusOneTC; // X
 				_texcoord[texSub++] = lineTC; // Y
 				indexSub++;
 				// LR
 				_vertices[vertSub++] = column + 1;
 				_vertices[vertSub++] = line + 1;
-				_vertices[vertSub++] = depthBuffer[(line + 1)* width + column + 1];
+				_vertices[vertSub++] = depthLR;
 				_texcoord[texSub++] = columnPlusOneTC; // X
 				_texcoord[texSub++] = linePlusOneTC; // Y
 				indexSub++;
