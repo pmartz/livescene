@@ -105,6 +105,11 @@ int main()
 
 	osg::ref_ptr<osg::PositionAttitudeTransform> centeringTransform = new osg::PositionAttitudeTransform();
 	centeringTransform->setPosition(osg::Vec3( 0.109038, -0.0146183, 1.74733));
+	// trying to get it onscreen where we want it, unsuccessful
+	//osg::Quat attitude;
+	//centeringTransform->setPivotPoint(osg::Vec3( 0.109038, -0.0146183, 1.74733));
+	//attitude.makeRotate(1.5707, 1.0, 0.0, 0.0);
+	//centeringTransform->setAttitude(attitude);
 	osg::ref_ptr<osg::MatrixTransform> kinectTransform;
 	kinectTransform = livescene::buildOSGGeometryMatrixTransform();
     kinectTransform->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
@@ -145,25 +150,26 @@ int main()
 			//foreZ.preAllocate(); // need room to write processed data to
 			//background.extractZBackground(imageZ, foreZ); // wipe out everything that is in the background plate
 			//geometryBuilder.buildPointCloud(foreZ, &imageRGB); // using isolated background
-			geometryBuilder.buildPointCloud(imageZ, &imageRGB); // do it without background isolation
+			//geometryBuilder.buildPointCloud(imageZ, &imageRGB); // do it without background isolation
 
 			//geometryBuilder.buildFaces(foreZ, &imageRGB); // using isolated background
-			//geometryBuilder.buildFaces(imageZ, &imageRGB); // do it without background isolation
+			geometryBuilder.buildFaces(imageZ, &imageRGB); // do it without background isolation
 
 			// build a new scene object on every frame
 			osg::ref_ptr<osg::Geode> liveScene;
-			liveScene = livescene::buildOSGPointCloudCopy(geometryBuilder);
-			//liveScene = livescene::buildOSGPolyMeshCopy(geometryBuilder);
+			//liveScene = livescene::buildOSGPointCloudCopy(geometryBuilder);
+			liveScene = livescene::buildOSGPolyMeshCopy(geometryBuilder);
 
 			// setup texturing
 			osg::StateSet* stateSet = liveScene->getOrCreateStateSet();
 			stateSet->setTextureAttributeAndModes( 0, tex );
 
+			image->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
+				GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(persistentImageRGB.getData()), osg::Image::NO_DELETE );
+
 			kinectTransform->removeChildren(0, 1); // this should throw away the removed child
 			kinectTransform->addChild(liveScene);
 
-			image->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
-				GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(persistentImageRGB.getData()), osg::Image::NO_DELETE );
 			viewer.frame();
 		} // if
 		else
