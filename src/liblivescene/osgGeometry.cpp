@@ -4,6 +4,8 @@
 
 namespace livescene {
 
+// <<<>>> this function does NOT currently work!
+
 LIVESCENE_EXPORT osg::Geode* buildOSGPointCloud(const livescene::Geometry &geometry)
 {
 	osg::ref_ptr<osg::Geode> geode;
@@ -23,6 +25,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloud(const livescene::Geometry &geome
 			unsigned int numIndices = geometry.getNumIndices();
 			geom->addPrimitiveSet(new osg::DrawElementsUShort(osg::PrimitiveSet::POINTS,
 															  numIndices,
+															  // <<<>>> this should probably have been getIndices()
 															  reinterpret_cast<unsigned short *>(geometry.getVertices())));
 		} // if
 
@@ -34,29 +37,9 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloud(const livescene::Geometry &geome
 } // buildOSGPointCloud
 
 
-/*
-	// create Geode
-	if(geode = new osg::Geode())
-	{
-		// create Geometry
-		osg::ref_ptr<osg::Geometry> geom(new osg::Geometry());
-		if(geom.valid())
-		{
-			// add vertices using WrappedArrayShort3 class
-			unsigned int numVertices = geometry.getNumVertices();
-			geom->setVertexArray(new WrappedArrayShort3(numVertices,geometry.getVertices()));
 
-			// add PrimitiveSet
-			unsigned int numIndices = geometry.getNumIndices();
-			geom->addPrimitiveSet(new osg::DrawElementsUShort(osg::PrimitiveSet::POINTS,
-															  numIndices,
-															  reinterpret_cast<unsigned short *>(geometry.getVertices())));
-		} // if
 
-		geode->addDrawable( geom.get() );
-	} // if
 
-*/
 
 LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &geometry)
 {
@@ -128,7 +111,77 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &g
 
     return(geode.release());
 
-} // buildOSGPointCloud
+} // buildOSGPointCloudCopy
+
+
+
+
+LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &geometry)
+{
+	// code taken from osg's example "osggeometry"
+	osg::ref_ptr<osg::Geode> geode;
+
+    // create the Geode (Geometry Node) to contain all our osg::Geometry objects.
+    geode = new osg::Geode();
+
+    // create TRIANGLES
+    {
+        // create Geometry object to store all the vertices and points primitive.
+        osg::Geometry* pointsGeom = new osg::Geometry();
+
+
+        // create a Vec3Array and add to it all my coordinates.
+        // Like all the *Array variants (see include/osg/Array) , Vec3Array is derived from both osg::Array 
+        // and std::vector<>.  osg::Array's are reference counted and hence sharable,
+        // which std::vector<> provides all the convenience, flexibility and robustness
+        // of the most popular of all STL containers.
+        osg::Vec3Array* vertices = new osg::Vec3Array;
+		osg::Vec2Array* texCoords = new osg::Vec2Array;
+		short *shortVertices = geometry.getVertices();
+		float *floatTexCoords = geometry.getTexCoord();
+		for(unsigned int vertexLoop = 0; vertexLoop < geometry.getNumVertices(); vertexLoop++)
+		{
+	        vertices->push_back(osg::Vec3(shortVertices[vertexLoop * 3], shortVertices[vertexLoop * 3 + 1], shortVertices[vertexLoop * 3 + 2]));
+			texCoords->push_back(osg::Vec2(floatTexCoords[vertexLoop * 2], floatTexCoords[vertexLoop * 2 + 1]));
+		} // for
+        
+        // pass the created vertex array to the points geometry object.
+        pointsGeom->setVertexArray(vertices);
+        
+        // pass the created texCoord array
+        pointsGeom->setTexCoordArray(0, texCoords);
+
+		// create the color of the geometry, one single for the whole geometry.
+        // for consistency of design even one single color must added as an element
+        // in a color array.
+        osg::Vec4Array* colors = new osg::Vec4Array;
+        // add a white color, colors take the form r,g,b,a with 0.0 off, 1.0 full on.
+        colors->push_back(osg::Vec4(1.0f,1.0f,1.0f,1.0f));
+        
+        // pass the color array to geometry, note the binding to tell the geometry
+        // that only use one color for the whole object.
+        pointsGeom->setColorArray(colors);
+        pointsGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
+        
+        
+        // set the normal in the same way color.
+        osg::Vec3Array* normals = new osg::Vec3Array;
+        normals->push_back(osg::Vec3(0.0f,-1.0f,0.0f));
+        pointsGeom->setNormalArray(normals);
+        pointsGeom->setNormalBinding(osg::Geometry::BIND_OVERALL);
+
+        pointsGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES,0,vertices->size()));
+       
+        
+        // add the points geometry to the geode.
+        geode->addDrawable(pointsGeom);
+    }
+
+
+    return(geode.release());
+
+} // buildOSGPolyMeshCopy
+
 
 
 

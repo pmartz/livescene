@@ -236,9 +236,8 @@ private:
 /** \brief Build OSG geometry for a point cloud using a provided Geometry.
 The supplied Geometry object must already have had buildPointCloud() called on it.
 Utilizes the arrays already stored in the livescene::Geometry object without copying.
-
+// <<<>>> this function does NOT currently work!
 */
-
 LIVESCENE_EXPORT osg::Geode* buildOSGPointCloud(const livescene::Geometry &geometry);
 
 
@@ -246,24 +245,33 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloud(const livescene::Geometry &geome
 /** \brief Build OSG geometry for a point cloud using a provided Geometry.
 The supplied Geometry object must already have had buildPointCloud() called on it.
 Copies the contents of the livescene::Geometry object's arrays, so it's slower, but simpler.
-
 */
-
 LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &geometry);
+
+
+
+
+/** \brief Build OSG geometry for a point cloud using a provided Geometry.
+The supplied Geometry object must already have had buildPointCloud() called on it.
+Utilizes the arrays already stored in the livescene::Geometry object without copying.
+// <<<>>> this function does NOT currently work!
+*/
+LIVESCENE_EXPORT osg::Geode* buildOSGPolyMesh(const livescene::Geometry &geometry);
+
+
+
+/** \brief Build OSG geometry for a point cloud using a provided Geometry.
+The supplied Geometry object must already have had buildPointCloud() called on it.
+Copies the contents of the livescene::Geometry object's arrays, so it's slower, but simpler.
+*/
+LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &geometry);
+
 
 
 /** \brief Convenience function to build a libfreenect/glpclview style vertex transform
 matrix from scratch in OSG form.
-
 */
-
 LIVESCENE_EXPORT osg::MatrixTransform* buildOSGGeometryMatrixTransform(void);
-
-/** \brief Convenience function to build a libfreenect/glpclview style texture coordinate transform
-matrix from scratch in OSG form.
-
-*/
-LIVESCENE_EXPORT osg::MatrixTransform* buildOSGTextureMatrixTransform(void);
 
 
 

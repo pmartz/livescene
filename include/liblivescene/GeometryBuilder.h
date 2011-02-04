@@ -61,12 +61,15 @@ private:
 	float *_normals;
 	float *_texcoord;
 	int _width, _height;
+	int _zNull;
 	GeometryEntityType _entityType;
 
 	unsigned int _numVertices, _numIndices, _numNormals, _numTexCoords;
 
 	void freeData(void);
 	void allocData(unsigned int numVert, unsigned int numId, unsigned int numTex, unsigned int numNorm);
+
+	inline bool isCellValueValid(short value) {return(value != _zNull && value != 0);}
 
 }; // Geometry
 

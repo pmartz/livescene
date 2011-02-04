@@ -115,50 +115,63 @@ int main()
 
 	bool oneShot(false);
 	
-	while( !viewer.done() )
+	for(bool keepGoing(true); keepGoing && !viewer.done(); )
     {
+		bool goodRGB(false), goodZ(false);
 		livescene::Image imageRGB(NominalFrameW, NominalFrameH, 3, livescene::VIDEO_RGB);
 		livescene::Image imageZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT);
 		livescene::Image foreZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT); // only the foreground
 		if(ImageCapabilitiesRGB)
 		{
-			ImageCapabilitiesRGB->getImageSync(imageRGB);
+			goodRGB = ImageCapabilitiesRGB->getImageSync(imageRGB);
 		} // if
 		if(ImageCapabilitiesZ)
 		{
-			ImageCapabilitiesZ->getImageSync(imageZ);
+			goodZ = ImageCapabilitiesZ->getImageSync(imageZ);
 		} // if
 
-		if(!backgroundEstablished)
-		{ // store a background clean plate
-			background.loadBackgroundFromCleanPlate(imageRGB, imageZ);
-			backgroundEstablished = true;
+		// check to see if we got both types of data ok
+		if(goodRGB && goodZ)
+		{
+
+			if(!backgroundEstablished)
+			{ // store a background clean plate
+				background.loadBackgroundFromCleanPlate(imageRGB, imageZ);
+				backgroundEstablished = true;
+			} // if
+
+			livescene::Image persistentImageRGB(imageRGB, true); // test making a persistent copy
+
+			//foreZ.preAllocate(); // need room to write processed data to
+			//background.extractZBackground(imageZ, foreZ); // wipe out everything that is in the background plate
+			//geometryBuilder.buildPointCloud(foreZ, &imageRGB); // using isolated background
+			geometryBuilder.buildPointCloud(imageZ, &imageRGB); // do it without background isolation
+
+			//geometryBuilder.buildFaces(foreZ, &imageRGB); // using isolated background
+			//geometryBuilder.buildFaces(imageZ, &imageRGB); // do it without background isolation
+
+			// build a new scene object on every frame
+			osg::ref_ptr<osg::Geode> liveScene;
+			liveScene = livescene::buildOSGPointCloudCopy(geometryBuilder);
+			//liveScene = livescene::buildOSGPolyMeshCopy(geometryBuilder);
+
+			// setup texturing
+			osg::StateSet* stateSet = liveScene->getOrCreateStateSet();
+			stateSet->setTextureAttributeAndModes( 0, tex );
+
+			kinectTransform->removeChildren(0, 1); // this should throw away the removed child
+			kinectTransform->addChild(liveScene);
+
+			image->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
+				GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(persistentImageRGB.getData()), osg::Image::NO_DELETE );
+			viewer.frame();
 		} // if
+		else
+		{
+			keepGoing = false; // error exit
+		} // else
 
-		livescene::Image persistentImageRGB(imageRGB, true); // test making a persistent copy
-
-		foreZ.preAllocate(); // need room to write processed data to
-		background.extractZBackground(imageZ, foreZ); // wipe out everything that is in the background plate
-		//geometryBuilder.buildPointCloud(foreZ, &imageRGB);
-
-		geometryBuilder.buildPointCloud(imageZ, &imageRGB); // do it without background isolation
-
-		// build a new cloud object on every frame
-		osg::ref_ptr<osg::Geode> pointCloud;
-		pointCloud = livescene::buildOSGPointCloudCopy(geometryBuilder);
-
-		// setup texturing
-		osg::StateSet* stateSet = pointCloud->getOrCreateStateSet();
-		stateSet->setTextureAttributeAndModes( 0, tex );
-
-		kinectTransform->removeChildren(0, 1); // this should throw away the removed child
-		kinectTransform->addChild(pointCloud);
-
-		image->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
-            GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(persistentImageRGB.getData()), osg::Image::NO_DELETE );
-
-        viewer.frame();
-    }
+    } // for keepGoing / !done
 
 	// Release the interfaces
 	if(ImageCapabilitiesRGB)
