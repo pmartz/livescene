@@ -22,15 +22,19 @@ namespace livescene {
 class LIVESCENE_EXPORT Background
 {
 	public:
-		Background() : _backgroundAvailable(false), _discriminationEpsilon(.03f) {};
+		Background() : _backgroundAvailable(false), _discriminationEpsilonPercent(.03f) {};
 		~Background() {};
 
 		bool getBackgroundAvailable(void) const {return(_backgroundAvailable);}
 
-		void setDiscriminationEpsilon(const float discriminationEpsilon) {_discriminationEpsilon = discriminationEpsilon;}
-		float getDiscriminationEpsilon(void) const {return(_discriminationEpsilon);}
+		// the discrimination epsilon is the amount of error tolerated when comparing the candidate Z value
+		// against the stored background Z value. It is expressed as a percent of the Z value of the
+		// sample being compared, since Z precision is presumed to degrade with distance.
+		void setDiscriminationEpsilonPercent(const float discriminationEpsilonPercent) {_discriminationEpsilonPercent = discriminationEpsilonPercent;}
+		float getDiscriminationEpsilonPercent(void) const {return(_discriminationEpsilonPercent);}
 
 		bool loadBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB, const livescene::Image &cleanPlateZ);
+		//bool accumulateBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB, const livescene::Image &cleanPlateZ);
 		bool loadRGBBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB);
 		bool loadZBackgroundFromCleanPlate(const livescene::Image &cleanPlateZ);
 
@@ -46,7 +50,7 @@ class LIVESCENE_EXPORT Background
 	private:
 		livescene::Image _bgRGB, _bgZ;
 		bool _backgroundAvailable;
-		float _discriminationEpsilon;
+		float _discriminationEpsilonPercent;
 
 }; // Background
 
