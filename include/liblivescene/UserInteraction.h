@@ -36,7 +36,7 @@ public:
 
 
 
-    LIVESCENE_EXPORT struct Interactor
+    struct LIVESCENE_EXPORT Interactor
     {
         Interactor();
 
