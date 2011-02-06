@@ -1,13 +1,21 @@
 // Copyright 2011 Skew Matrix Software and AlphaPixel
 
 #include "liblivescene/GeometryBuilder.h"
+#include <limits>
+#include <cstring> // memset
 
 namespace livescene {
 
 Geometry::~Geometry()
 {
 	freeData();
+	freeTempBuffer();
 } // Geometry::Geometry
+
+void Geometry::freeTempBuffer(void)
+{
+	delete [] _indicesTempBuffer; _indicesTempBuffer = 0;
+} // Geometry::freeTempBuffer
 
 void Geometry::freeData(void)
 {
@@ -25,6 +33,22 @@ void Geometry::allocData(const unsigned int &numVert, const unsigned int &numId,
 	_texcoord = new float[numTex * 2]; // two floats per tc
 	_normals  = new float[numNorm * 3]; // three floats per normal
 } // Geometry::allocData
+
+
+void Geometry::allocTempBuffer(void)
+{
+	if(!_indicesTempBuffer)
+		_indicesTempBuffer = new unsigned int[getHeight() * getWidth()];
+} // Geometry::allocTempBuffer
+
+
+void Geometry::clearTempBuffer(const unsigned int &_clearValue)
+{
+	std::fill( _indicesTempBuffer, _indicesTempBuffer + (getHeight() * getWidth()), _clearValue );
+
+} // Geometry::clearTempBuffer
+
+
 
 
 bool Geometry::buildPointCloud(const livescene::Image &imageZ, livescene::Image *imageRGB)
@@ -81,6 +105,8 @@ bool Geometry::buildPointCloud(const livescene::Image &imageZ, livescene::Image 
 
 bool Geometry::buildFaces(const livescene::Image &imageZ, livescene::Image *imageRGB)
 {
+	// define our "unused" value, since 0 is a valid value
+	const unsigned int _tempBufferUnusedValue = std::numeric_limits<unsigned int>::max();
 	_entityType = GEOMETRY_FACES;
 	_width = imageZ.getWidth();
 	_height = imageZ.getHeight();
@@ -92,14 +118,18 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, livescene::Image *imag
 
 	int width(imageZ.getWidth()), height(imageZ.getHeight());
 
-	// multiply all resource sizes by maxTrisPerSample(4) because each sample can be in up to 4 triangle polygons
-	const int vertsPerTri(3), maxTrisPerCell(2);
+	// because each sample can be in up to 4 triangle polygons
+	const int vertsPerTri(3), maxTrisPerCell(2), totalSamples(width * height);
 	const int maxNumTris = (width - 1) * (height - 1) * maxTrisPerCell; // two tris per cell that spans two samples
-	_numVertices  = maxNumTris * vertsPerTri;
-	_numIndices   = 0; // maxNumTris * vertsPerTri; // we don't seem to be using indices, we're dumping vertices
-	_numTexCoords = maxNumTris * vertsPerTri;
-	_numNormals   = 0; // maxNumTris * vertsPerTri; // may not need normals if we're not lighting it
+	_numVertices  = totalSamples; // one per sample
+	_numIndices   = maxNumTris * vertsPerTri; // we recycle vertices, but indices are not duplicated
+	_numTexCoords = totalSamples; // one per sample
+	_numNormals   = 0; // width * height; // may not need normals if we're not lighting it
 	allocData(_numVertices, _numIndices, _numTexCoords, _numNormals);
+	allocTempBuffer(); // will only allocate if not already allocated. Must be done after allocData
+	// we need to clear the array each time through, even if it's already allocated
+	clearTempBuffer(_tempBufferUnusedValue); // clear to "unused" value
+
 
 	short *depthBuffer = (short *)imageZ.getData();
 
@@ -109,7 +139,7 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, livescene::Image *imag
 	// however, if that's not possible, but it can form one or the other triangle
 	// if the split runs LL-UR, it will try to do so. This reduces sawtooth edges
 	// along borders between data and no-data.
-	unsigned int loopSub(0), vertSub(0), indexSub(0), texSub(0), normSub(0), polyCount(0);
+	unsigned int loopSub(0), vertSub(0), vertCount(0), indexSub(0), texSub(0), normSub(0), polyCount(0);
 	_zNull = imageZ.getNull();
 	for(int line = 0; line < height - 1; line++) // NOTE: height - 1
 	{
@@ -118,13 +148,17 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, livescene::Image *imag
 		for(int column = 0; column < width - 1; column++) // NOTE: width - 1
 		{
 			const unsigned int loopSub = line * width + column;
+			const unsigned int loopSubPlusOneColumn = line * width + column + 1;
+			const unsigned int loopSubPlusOneRow = (line + 1)* width + column;
+			const unsigned int loopSubPlusOneRowColumn = (line + 1)* width + column + 1;
+
 			const float columnTC = (float)column / (float)width;
 			const float columnPlusOneTC = (float)(column + 1) / (float)width;
 			// preread these four since we'll need them repeatedly
 			short depthUL = depthBuffer[loopSub];
-			short depthUR = depthBuffer[line * width + column + 1];
-			short depthLL = depthBuffer[(line + 1)* width + column];
-			short depthLR = depthBuffer[(line + 1)* width + column + 1];
+			short depthUR = depthBuffer[loopSubPlusOneColumn];
+			short depthLL = depthBuffer[loopSubPlusOneRow];
+			short depthLR = depthBuffer[loopSubPlusOneRowColumn];
 			// is top-left sample of mesh cell (at loop subscripts) non-rejected?
 			if(isCellValueValid(depthUL))
 			{
@@ -137,26 +171,49 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, livescene::Image *imag
 					{
 						// form UL, LL, LR triangle
 						// UL
-						_vertices[vertSub++] = column;
-						_vertices[vertSub++] = line;
-						_vertices[vertSub++] = depthUL;
-						_texcoord[texSub++] = columnTC; // X
-						_texcoord[texSub++] = lineTC; // Y
-						indexSub++;
+						if(_indicesTempBuffer[loopSub] == _tempBufferUnusedValue)
+						{
+							// record where we put this sample's vertex/texcoord for later reference
+							_indicesTempBuffer[loopSub] = vertCount++;
+							// and then add the vertex where we said we would
+							_vertices[vertSub++] = column;
+							_vertices[vertSub++] = line;
+							_vertices[vertSub++] = depthUL;
+							_texcoord[texSub++] = columnTC; // X
+							_texcoord[texSub++] = lineTC; // Y
+						} // if
+						// add a reference to where the vertex is already stored
+						_indices[indexSub++] = _indicesTempBuffer[loopSub];
+
 						// LL
-						_vertices[vertSub++] = column;
-						_vertices[vertSub++] = line + 1;
-						_vertices[vertSub++] = depthLL;
-						_texcoord[texSub++] = columnTC; // X
-						_texcoord[texSub++] = linePlusOneTC; // Y
-						indexSub++;
+						if(_indicesTempBuffer[loopSubPlusOneRow] == _tempBufferUnusedValue)
+						{
+							// record where we put this sample's vertex/texcoord for later reference
+							_indicesTempBuffer[loopSubPlusOneRow] = vertCount++;
+							// and then add the vertex where we said we would
+							_vertices[vertSub++] = column;
+							_vertices[vertSub++] = line + 1;
+							_vertices[vertSub++] = depthLL;
+							_texcoord[texSub++] = columnTC; // X
+							_texcoord[texSub++] = linePlusOneTC; // Y
+						} // if
+						// add a reference to where the vertex is already stored
+						_indices[indexSub++] = _indicesTempBuffer[loopSubPlusOneRow];
+
 						// LR
-						_vertices[vertSub++] = column + 1;
-						_vertices[vertSub++] = line + 1;
-						_vertices[vertSub++] = depthLR;
-						_texcoord[texSub++] = columnPlusOneTC; // X
-						_texcoord[texSub++] = linePlusOneTC; // Y
-						indexSub++;
+						if(_indicesTempBuffer[loopSubPlusOneRowColumn] == _tempBufferUnusedValue)
+						{
+							// record where we put this sample's vertex/texcoord for later reference
+							_indicesTempBuffer[loopSubPlusOneRowColumn] = vertCount++;
+							// and then add the vertex where we said we would
+							_vertices[vertSub++] = column + 1;
+							_vertices[vertSub++] = line + 1;
+							_vertices[vertSub++] = depthLR;
+							_texcoord[texSub++] = columnPlusOneTC; // X
+							_texcoord[texSub++] = linePlusOneTC; // Y
+						} // if
+						// add a reference to where the vertex is already stored
+						_indices[indexSub++] = _indicesTempBuffer[loopSubPlusOneRowColumn];
 
 						polyCount++;
 					} // if
@@ -167,26 +224,49 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, livescene::Image *imag
 					{
 						// form UL, LR, UR triangle
 						// UL
-						_vertices[vertSub++] = column;
-						_vertices[vertSub++] = line;
-						_vertices[vertSub++] = depthUL;
-						_texcoord[texSub++] = columnTC; // X
-						_texcoord[texSub++] = lineTC; // Y
-						indexSub++;
+						if(_indicesTempBuffer[loopSub] == _tempBufferUnusedValue)
+						{
+							// record where we put this sample's vertex/texcoord for later reference
+							_indicesTempBuffer[loopSub] = vertCount++;
+							// and then add the vertex where we said we would
+							_vertices[vertSub++] = column;
+							_vertices[vertSub++] = line;
+							_vertices[vertSub++] = depthUL;
+							_texcoord[texSub++] = columnTC; // X
+							_texcoord[texSub++] = lineTC; // Y
+						} // if
+						// add a reference to where the vertex is already stored
+						_indices[indexSub++] = _indicesTempBuffer[loopSub];
+
 						// LR
-						_vertices[vertSub++] = column + 1;
-						_vertices[vertSub++] = line + 1;
-						_vertices[vertSub++] = depthLR;
-						_texcoord[texSub++] = columnPlusOneTC; // X
-						_texcoord[texSub++] = linePlusOneTC; // Y
-						indexSub++;
+						if(_indicesTempBuffer[loopSubPlusOneRowColumn] == _tempBufferUnusedValue)
+						{
+							// record where we put this sample's vertex/texcoord for later reference
+							_indicesTempBuffer[loopSubPlusOneRowColumn] = vertCount++;
+							// and then add the vertex where we said we would
+							_vertices[vertSub++] = column + 1;
+							_vertices[vertSub++] = line + 1;
+							_vertices[vertSub++] = depthLR;
+							_texcoord[texSub++] = columnPlusOneTC; // X
+							_texcoord[texSub++] = linePlusOneTC; // Y
+						} // if
+						// add a reference to where the vertex is already stored
+						_indices[indexSub++] = _indicesTempBuffer[loopSubPlusOneRowColumn];
+
 						// UR
-						_vertices[vertSub++] = column + 1;
-						_vertices[vertSub++] = line;
-						_vertices[vertSub++] = depthUR;
-						_texcoord[texSub++] = columnPlusOneTC; // X
-						_texcoord[texSub++] = lineTC; // Y
-						indexSub++;
+						if(_indicesTempBuffer[loopSubPlusOneColumn] == _tempBufferUnusedValue)
+						{
+							// record where we put this sample's vertex/texcoord for later reference
+							_indicesTempBuffer[loopSubPlusOneColumn] = vertCount++;
+							// and then add the vertex where we said we would
+							_vertices[vertSub++] = column + 1;
+							_vertices[vertSub++] = line;
+							_vertices[vertSub++] = depthUR;
+							_texcoord[texSub++] = columnPlusOneTC; // X
+							_texcoord[texSub++] = lineTC; // Y
+						} // if
+						// add a reference to where the vertex is already stored
+						_indices[indexSub++] = _indicesTempBuffer[loopSubPlusOneColumn];
 
 						polyCount++;
 					} // if
@@ -197,26 +277,49 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, livescene::Image *imag
 				{
 					// form UL, LL, UR triangle
 					// UL
-					_vertices[vertSub++] = column;
-					_vertices[vertSub++] = line;
-					_vertices[vertSub++] = depthUL;
-					_texcoord[texSub++] = columnTC; // X
-					_texcoord[texSub++] = lineTC; // Y
-					indexSub++;
+					if(_indicesTempBuffer[loopSub] == _tempBufferUnusedValue)
+					{
+						// record where we put this sample's vertex/texcoord for later reference
+						_indicesTempBuffer[loopSub] = vertCount++;
+						// and then add the vertex where we said we would
+						_vertices[vertSub++] = column;
+						_vertices[vertSub++] = line;
+						_vertices[vertSub++] = depthUL;
+						_texcoord[texSub++] = columnTC; // X
+						_texcoord[texSub++] = lineTC; // Y
+					} // if
+					// add a reference to where the vertex is already stored
+					_indices[indexSub++] = _indicesTempBuffer[loopSub];
+
 					// LL
-					_vertices[vertSub++] = column;
-					_vertices[vertSub++] = line + 1;
-					_vertices[vertSub++] = depthLL;
-					_texcoord[texSub++] = columnTC; // X
-					_texcoord[texSub++] = linePlusOneTC; // Y
-					indexSub++;
+					if(_indicesTempBuffer[loopSubPlusOneRow] == _tempBufferUnusedValue)
+					{
+						// record where we put this sample's vertex/texcoord for later reference
+						_indicesTempBuffer[loopSubPlusOneRow] = vertCount++;
+						// and then add the vertex where we said we would
+						_vertices[vertSub++] = column;
+						_vertices[vertSub++] = line + 1;
+						_vertices[vertSub++] = depthLL;
+						_texcoord[texSub++] = columnTC; // X
+						_texcoord[texSub++] = linePlusOneTC; // Y
+					} // if
+					// add a reference to where the vertex is already stored
+					_indices[indexSub++] = _indicesTempBuffer[loopSubPlusOneRow];
+
 					// UR
-					_vertices[vertSub++] = column + 1;
-					_vertices[vertSub++] = line;
-					_vertices[vertSub++] = depthUR;
-					_texcoord[texSub++] = columnPlusOneTC; // X
-					_texcoord[texSub++] = lineTC; // Y
-					indexSub++;
+					if(_indicesTempBuffer[loopSubPlusOneColumn] == _tempBufferUnusedValue)
+					{
+						// record where we put this sample's vertex/texcoord for later reference
+						_indicesTempBuffer[loopSubPlusOneColumn] = vertCount++;
+						// and then add the vertex where we said we would
+						_vertices[vertSub++] = column + 1;
+						_vertices[vertSub++] = line;
+						_vertices[vertSub++] = depthUR;
+						_texcoord[texSub++] = columnPlusOneTC; // X
+						_texcoord[texSub++] = lineTC; // Y
+					} // if
+					// add a reference to where the vertex is already stored
+					_indices[indexSub++] = _indicesTempBuffer[loopSubPlusOneColumn];
 
 					polyCount++;
 				} // else if
@@ -227,38 +330,61 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, livescene::Image *imag
 			{
 				// form LL, UR, LR triangle
 				// LL
-				_vertices[vertSub++] = column;
-				_vertices[vertSub++] = line + 1;
-				_vertices[vertSub++] = depthLL;
-				_texcoord[texSub++] = columnTC; // X
-				_texcoord[texSub++] = linePlusOneTC; // Y
-				indexSub++;
+				if(_indicesTempBuffer[loopSubPlusOneRow] == _tempBufferUnusedValue)
+				{
+					// record where we put this sample's vertex/texcoord for later reference
+					_indicesTempBuffer[loopSubPlusOneRow] = vertCount++;
+					// and then add the vertex where we said we would
+					_vertices[vertSub++] = column;
+					_vertices[vertSub++] = line + 1;
+					_vertices[vertSub++] = depthLL;
+					_texcoord[texSub++] = columnTC; // X
+					_texcoord[texSub++] = linePlusOneTC; // Y
+				} // if
+				// add a reference to where the vertex is already stored
+				_indices[indexSub++] = _indicesTempBuffer[loopSubPlusOneRow];
+
 				// UR
-				_vertices[vertSub++] = column + 1;
-				_vertices[vertSub++] = line;
-				_vertices[vertSub++] = depthUR;
-				_texcoord[texSub++] = columnPlusOneTC; // X
-				_texcoord[texSub++] = lineTC; // Y
-				indexSub++;
+				if(_indicesTempBuffer[loopSubPlusOneColumn] == _tempBufferUnusedValue)
+				{
+					// record where we put this sample's vertex/texcoord for later reference
+					_indicesTempBuffer[loopSubPlusOneColumn] = vertCount++;
+					// and then add the vertex where we said we would
+					_vertices[vertSub++] = column + 1;
+					_vertices[vertSub++] = line;
+					_vertices[vertSub++] = depthUR;
+					_texcoord[texSub++] = columnPlusOneTC; // X
+					_texcoord[texSub++] = lineTC; // Y
+				} // if
+				// add a reference to where the vertex is already stored
+				_indices[indexSub++] = _indicesTempBuffer[loopSubPlusOneColumn];
+
 				// LR
-				_vertices[vertSub++] = column + 1;
-				_vertices[vertSub++] = line + 1;
-				_vertices[vertSub++] = depthLR;
-				_texcoord[texSub++] = columnPlusOneTC; // X
-				_texcoord[texSub++] = linePlusOneTC; // Y
-				indexSub++;
+				if(_indicesTempBuffer[loopSubPlusOneRowColumn] == _tempBufferUnusedValue)
+				{
+					// record where we put this sample's vertex/texcoord for later reference
+					_indicesTempBuffer[loopSubPlusOneRowColumn] = vertCount++;
+					// and then add the vertex where we said we would
+					_vertices[vertSub++] = column + 1;
+					_vertices[vertSub++] = line + 1;
+					_vertices[vertSub++] = depthLR;
+					_texcoord[texSub++] = columnPlusOneTC; // X
+					_texcoord[texSub++] = linePlusOneTC; // Y
+				} // if
+				// add a reference to where the vertex is already stored
+				_indices[indexSub++] = _indicesTempBuffer[loopSubPlusOneRowColumn];
 
 				polyCount++;
 			} // else
 		} // for
 	} // for lines
 
-	_numVertices  = indexSub; // this is number of three-element vertices, not number of elements in the vertices array
-	_numIndices   = 0; // didn't use them
-	_numTexCoords = indexSub; // this is number of two-element texcoords, not number of elements in the texcoord array
+	_numVertices  = vertCount; // this is number of three-element vertices, not number of elements in the vertices array
+	_numIndices   = indexSub;
+	_numTexCoords = vertCount; // this is number of two-element texcoords, not number of elements in the texcoord array
 
 	return(true);
-} // buildPointCloudGeometry
+} // buildFaces
 
 
 

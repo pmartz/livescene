@@ -30,7 +30,7 @@ public:
 		GEOMETRY_FACES               = 2,
 	} GeometryEntityType;
 
-	Geometry() : _vertices(0), _indices(0), _normals(0), _texcoord(0), _entityType(GEOMETRY_UNKNOWN),
+	Geometry() : _vertices(0), _indices(0), _indicesTempBuffer(0), _normals(0), _texcoord(0), _entityType(GEOMETRY_UNKNOWN),
 		_numVertices(0), _numIndices(0), _numNormals(0), _numTexCoords(0), _width(0), _height(0), _meshEpsilonPercent(.005f) {}
 	~Geometry();
 
@@ -59,12 +59,15 @@ public:
 	imageZ is required, imageRGB is optional can can be NULL. Returns NULL for failure. */
 	bool buildPointCloud(const livescene::Image &imageZ, livescene::Image *imageRGB);
 
-	/** Build quads geometry vertex, normal and texcoord arrays from Z buffer, with optional nulling. */
+	/** Build quads geometry vertex, normal and texcoord arrays from Z buffer, with optional nulling.
+	This utilizes a hidden temporary buffer so as not to reallocate on each frame. Do not change image resolution
+	once you've started using buildFaces(). */
 	bool buildFaces(const livescene::Image &imageZ, livescene::Image *imageRGB);
 
 private:
 	short *_vertices;
 	unsigned int *_indices;
+	unsigned int *_indicesTempBuffer; // tempbuffer is used to record which index a vertex/tx has already been recorded at (for reuse)
 	float *_normals;
 	float *_texcoord;
 	int _width, _height;
@@ -76,6 +79,9 @@ private:
 
 	void freeData(void);
 	void allocData(const unsigned int &numVert, const unsigned int &numId, const unsigned int &numTex, const unsigned int &numNorm);
+	void freeTempBuffer(void);
+	void allocTempBuffer(void);
+	void clearTempBuffer(const unsigned int &_clearValue);
 
 	inline bool isCellValueValid(const short &value) {return(value != _zNull && value != 0);}
 	inline bool isTriRangeMeshable(const short &valueA, const short &valueB, const short &valueC)

@@ -1,6 +1,7 @@
 // Copyright 2011 Skew Matrix Software and AlphaPixel
 
 #include "liblivescene/osgGeometry.h"
+#include <osg/PrimitiveSet>
 
 namespace livescene {
 
@@ -131,20 +132,27 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &geo
         // create Geometry object to store all the vertices and points primitive.
         osg::Geometry* pointsGeom = new osg::Geometry();
 
+        // create a Vec3Array and add to it all the coordinates.
+		osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array;
+		osg::ref_ptr<osg::Vec2Array> texCoords = new osg::Vec2Array;
+		osg::ref_ptr<osg::DrawElementsUInt> elements = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES);
 
-        // create a Vec3Array and add to it all my coordinates.
-        // Like all the *Array variants (see include/osg/Array) , Vec3Array is derived from both osg::Array 
-        // and std::vector<>.  osg::Array's are reference counted and hence sharable,
-        // which std::vector<> provides all the convenience, flexibility and robustness
-        // of the most popular of all STL containers.
-        osg::Vec3Array* vertices = new osg::Vec3Array;
-		osg::Vec2Array* texCoords = new osg::Vec2Array;
+		// pre-size arrays for better performance
+		vertices->reserve(geometry.getNumVertices());
+		texCoords->reserve(geometry.getNumTexCoords());
+		elements->reserve(geometry.getNumIndices());
+		
 		short *shortVertices = geometry.getVertices();
 		float *floatTexCoords = geometry.getTexCoord();
-		for(unsigned int vertexLoop = 0; vertexLoop < geometry.getNumVertices(); vertexLoop++)
+		unsigned int *intIndices = geometry.getIndices();
+		for(unsigned int vertexLoop(0); vertexLoop < geometry.getNumVertices(); vertexLoop++)
 		{
 	        vertices->push_back(osg::Vec3(shortVertices[vertexLoop * 3], shortVertices[vertexLoop * 3 + 1], shortVertices[vertexLoop * 3 + 2]));
 			texCoords->push_back(osg::Vec2(floatTexCoords[vertexLoop * 2], floatTexCoords[vertexLoop * 2 + 1]));
+		} // for
+		for(unsigned int idxLoop(0); idxLoop < geometry.getNumIndices(); idxLoop++)
+		{
+			elements->push_back(intIndices[idxLoop]);
 		} // for
         
         // pass the created vertex array to the points geometry object.
@@ -172,8 +180,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &geo
         pointsGeom->setNormalArray(normals);
         pointsGeom->setNormalBinding(osg::Geometry::BIND_OVERALL);
 
-        pointsGeom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES,0,vertices->size()));
-       
+		pointsGeom->addPrimitiveSet(elements);       
         
         // add the points geometry to the geode.
         geode->addDrawable(pointsGeom);
