@@ -124,8 +124,8 @@ public:
     LIVESCENE_EXPORT void setContactEventMap( const ContactEventMap& map );
     LIVESCENE_EXPORT void getContactEventMap( ContactEventMap& map );
 
-    LIVESCENE_EXPORT void setDefaultDetectionThreashold( unsigned short distance );
-    LIVESCENE_EXPORT unsigned short getDefaultDetectionThreashold() const;
+    LIVESCENE_EXPORT void setDefaultDetectionThreshold( unsigned short distance );
+    LIVESCENE_EXPORT unsigned short getDefaultDetectionThreshold() const;
 
     // 1=left, 2=middle, 3=right
     LIVESCENE_EXPORT void setDefaultSendEventsButton( int button );

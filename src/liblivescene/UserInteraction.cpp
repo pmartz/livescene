@@ -217,11 +217,11 @@ void UserInteraction::getContactEventMap( ContactEventMap& map )
     map = _eventMap;
 }
 
-void UserInteraction::setDefaultDetectionThreashold( unsigned short distance )
+void UserInteraction::setDefaultDetectionThreshold( unsigned short distance )
 {
     _defaultDetectionThreshold = distance;
 }
-unsigned short UserInteraction::getDefaultDetectionThreashold() const
+unsigned short UserInteraction::getDefaultDetectionThreshold() const
 {
     return( _defaultDetectionThreshold );
 }
@@ -256,7 +256,9 @@ int UserInteraction::getIndexOfClosest( const osg::Vec2s& loc, const InteractorC
     for( idx=0; idx < interactors.size(); idx++ )
     {
         const Interactor& candidate( interactors[ idx ] );
-        double dsq = candidate._location.x() * loc.x() + candidate._location.y() * loc.y();
+        float a = candidate._location.x() - loc.x();
+        float b = candidate._location.y() - loc.y();
+        double dsq = a * a + b * b;
         if( dsq < minDistance )
         {
             minDistance = dsq;
@@ -303,8 +305,11 @@ bool UserInteraction::eraseByIndex( const unsigned int index, InteractorContaine
 {
     InteractorContainer::iterator itr = interactors.begin();
     unsigned int idx( 0 );
-    while( idx != index )
+    while( ( idx != index ) && ( itr != interactors.end() ) )
+    {
+        idx++;
         itr++;
+    }
     if( itr == interactors.end() )
         return( false );
 
