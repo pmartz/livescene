@@ -126,12 +126,14 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
 
     // Make a local copy of the const set of last Interactors.
     InteractorContainer old = lastInteractors;
+    //std::cout << "initial " << old.size() << std::endl;
 
     InteractorContainer::iterator itr;
     for( itr=newInteractors.begin(); itr != newInteractors.end(); itr++ )
     {
         Interactor& current = *itr;
         int prevIdx = getIndexByID( current._id, lastInteractors );
+        //std::cout << current._id << "  " << prevIdx << std::endl;
         if( prevIdx >= 0 )
         {
             // It's an existing Interactor. Generate a DRAG event.
@@ -141,6 +143,7 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
             // We found this interactor. Take it off the 'old' list.
             // Interactors remaining on the 'old' list will generate RELEASE events.
             eraseByIndex( prevIdx, old );
+            //std::cout << "post erase " << old.size() << std::endl;
 
             Interactor& previous = lastInteractors[ prevIdx ];
             current._age = previous._age+1;
@@ -194,7 +197,8 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
         }
     }
 
-    // Anything left on 'old' was not found on nowInteractors, so generate RELEASE
+    //std::cout << "issuing release " << old.size() << std::endl;
+    // Anything left on 'old' was not found on newInteractors, so generate RELEASE
     for( itr=old.begin(); itr != old.end(); itr++ )
     {
         const Interactor& current = *itr;
@@ -202,8 +206,8 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
         float x, y;
         transformMouse( x, y, current._location.x(), current._location.y() );
 
-        //std::cout << "RELEASE " << current._location;
-        //std::cout << " " << x << ", " << y << std::endl;
+        std::cout << "Mouse RELEASE event " << current._location;
+        std::cout << " " << x << ", " << y << std::endl;
         eq->mouseButtonRelease( x, y, _defaultSendEventsButton );
     }
 }
@@ -304,7 +308,7 @@ int UserInteraction::getIndexByID( const unsigned int id, const InteractorContai
 
 bool UserInteraction::eraseByIndex( const unsigned int index, InteractorContainer& interactors ) const
 {
-    std::cout << "eraseByIndex for index " << index << " size " << interactors.size() << std::endl;
+    //std::cout << "eraseByIndex for index " << index << " size " << interactors.size() << std::endl;
 
     InteractorContainer::iterator itr = interactors.begin();
     unsigned int idx( 0 );
@@ -319,10 +323,10 @@ bool UserInteraction::eraseByIndex( const unsigned int index, InteractorContaine
         return( false );
     }
 
-    std::cout << "  eraseByIndex erasing index " << index << std::endl;
+    //std::cout << "  eraseByIndex erasing index " << index << std::endl;
     interactors.erase( itr );
-    for( itr = interactors.begin(); itr != interactors.end(); itr++ )
-        std::cout << "    " << itr->_location.x() << "," << itr->_location.y() << std::endl;
+    //for( itr = interactors.begin(); itr != interactors.end(); itr++ )
+    //    std::cout << "    " << itr->_location.x() << "," << itr->_location.y() << std::endl;
     return( true );
 }
 
