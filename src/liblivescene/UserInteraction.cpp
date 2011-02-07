@@ -303,6 +303,8 @@ int UserInteraction::getIndexByID( const unsigned int id, const InteractorContai
 
 bool UserInteraction::eraseByIndex( const unsigned int index, InteractorContainer& interactors ) const
 {
+    std::cout << "eraseByIndex for index " << index << " size " << interactors.size() << std::endl;
+
     InteractorContainer::iterator itr = interactors.begin();
     unsigned int idx( 0 );
     while( ( idx != index ) && ( itr != interactors.end() ) )
@@ -311,8 +313,12 @@ bool UserInteraction::eraseByIndex( const unsigned int index, InteractorContaine
         itr++;
     }
     if( itr == interactors.end() )
+    {
+        std::cout << "  eraseByIndex failed to find index " << index << std::endl;
         return( false );
+    }
 
+    std::cout << "  eraseByIndex erasing index " << index << std::endl;
     interactors.erase( itr );
     return( true );
 }

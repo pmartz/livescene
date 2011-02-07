@@ -31,6 +31,8 @@ public:
     LIVESCENE_EXPORT ~UserInteraction();
 
     /** \brief Detects interactors and sends them as events.
+    Apps call this once per frame to generate events from image data.
+    Leaves the list of current Interactors in the \c _interactors member variable.
     */
     LIVESCENE_EXPORT void detectAndSendEvents( const livescene::Image& imageRGB, const livescene::Image& imageZ );
 
@@ -40,13 +42,13 @@ public:
     {
         Interactor();
 
-        std::string _name;
-        unsigned int _id;
-        osg::Vec2s _location;
-        unsigned short _distance;
-        osg::Vec3 _worldCoord;
-        unsigned int _age;
-        bool _active;
+        std::string _name; // Currently unused.
+        unsigned int _id; // Unique identifier.
+        osg::Vec2s _location; // Device coords.
+        unsigned short _distance; // Device depth value.
+        osg::Vec3 _worldCoord; // Currently unused.
+        unsigned int _age; // Count of frames this Interactor has existed.
+        bool _active; // Enabled or disables.
     };
     typedef std::vector< Interactor > InteractorContainer;
 
@@ -56,13 +58,11 @@ public:
     */
     LIVESCENE_EXPORT void defaultDetection( InteractorContainer& interactors, const livescene::Image& imageRGB, const livescene::Image& imageZ );
 
-    struct LIVESCENE_EXPORT DetectionCallback : public osg::Object
+    struct LIVESCENE_EXPORT DetectionCallback : public osg::Referenced
     {
     public:
         DetectionCallback() {}
-        DetectionCallback( const DetectionCallback&, const osg::CopyOp& copyop=osg::CopyOp::SHALLOW_COPY ) {}
         virtual ~DetectionCallback() {}
-        META_Object(livescene,DetectionCallback);
 
         /** Support for detecting interactors in application code. Add interactors to
         the \interactors parameter.
@@ -87,13 +87,11 @@ public:
     */
     LIVESCENE_EXPORT void defaultSendEvents( InteractorContainer& lastInteractors, InteractorContainer& newInteractors );
 
-    struct LIVESCENE_EXPORT SendEventsCallback : public osg::Object
+    struct LIVESCENE_EXPORT SendEventsCallback : public osg::Referenced
     {
     public:
         SendEventsCallback() {}
-        SendEventsCallback( const SendEventsCallback&, const osg::CopyOp& copyop=osg::CopyOp::SHALLOW_COPY ) {}
         virtual ~SendEventsCallback() {}
-        META_Object(livescene,SendEventsCallback);
 
         /** Support for sending events in application code. Compare the list
         of current interactors to the list of previous interactors, and generate
