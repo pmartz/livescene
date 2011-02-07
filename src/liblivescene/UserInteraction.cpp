@@ -116,6 +116,7 @@ void UserInteraction::defaultDetection( InteractorContainer& interactors, const 
     newInteractor._location = minLoc;
     newInteractor._distance = minVal;
     newInteractor._active = ( minVal < _defaultDetectionThreshold );
+    std::cout << "Active: " << newInteractor._active << " because: " << minVal << " and " << _defaultDetectionThreshold << std::endl;
     interactors.push_back( newInteractor );
 }
 
@@ -320,6 +321,8 @@ bool UserInteraction::eraseByIndex( const unsigned int index, InteractorContaine
 
     std::cout << "  eraseByIndex erasing index " << index << std::endl;
     interactors.erase( itr );
+    for( itr = interactors.begin(); itr != interactors.end(); itr++ )
+        std::cout << "    " << itr->_location.x() << "," << itr->_location.y() << std::endl;
     return( true );
 }
 
