@@ -162,30 +162,26 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &geo
         pointsGeom->setTexCoordArray(0, texCoords);
 
 		// create the color of the geometry, one single for the whole geometry.
-        // for consistency of design even one single color must added as an element
-        // in a color array.
         osg::Vec4Array* colors = new osg::Vec4Array;
-        // add a white color, colors take the form r,g,b,a with 0.0 off, 1.0 full on.
         colors->push_back(osg::Vec4(1.0f,1.0f,1.0f,1.0f));
         
         // pass the color array to geometry, note the binding to tell the geometry
         // that only use one color for the whole object.
         pointsGeom->setColorArray(colors);
-        pointsGeom->setColorBinding(osg::Geometry::BIND_OVERALL);
+        pointsGeom->setColorBinding(osg::Geometry::BIND_OVERALL);        
         
-        
-        // set the normal in the same way color.
+        // set the normal in the same way as the color.
         osg::Vec3Array* normals = new osg::Vec3Array;
         normals->push_back(osg::Vec3(0.0f,-1.0f,0.0f));
         pointsGeom->setNormalArray(normals);
         pointsGeom->setNormalBinding(osg::Geometry::BIND_OVERALL);
 
-		pointsGeom->addPrimitiveSet(elements);       
+		pointsGeom->addPrimitiveSet(elements);
+		pointsGeom->setUseVertexBufferObjects(true); // makes a significant difference in performance
         
         // add the points geometry to the geode.
         geode->addDrawable(pointsGeom);
-    }
-
+    } // if
 
     return(geode.release());
 
