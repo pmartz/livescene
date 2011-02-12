@@ -116,11 +116,13 @@ int main()
 
     livescene::DeviceManager *deviceManager = new livescene::DeviceManager();
     livescene::FactoryCollection collection;
-    livescene::StringContainer capabilityCriteria;
     livescene::DeviceBase *genericDevice(NULL);
     livescene::DeviceCapabilitiesImage *imageCapabilitiesRGB(NULL),  *imageCapabilitiesZ(NULL);
 
-    if( !( deviceManager->enumDevicesByName( collection, "DeviceFreenect" ) ) )
+	livescene::StringContainer capabilityCriteria;
+	capabilityCriteria.push_back("IMAGE_RGB_RESOLUTION_640x480"); // Kinect basic RGB res
+	capabilityCriteria.push_back("IMAGE_Z_RESOLUTION_640x480"); // Kinect basic Z res
+    if( !( deviceManager->enumDevicesByCapability( collection, capabilityCriteria ) ) )
     {
         std::cerr << "Can't find DeviceFreenect." << std::endl;
         return( 1 );
