@@ -177,6 +177,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &geo
         pointsGeom->setNormalBinding(osg::Geometry::BIND_OVERALL);
 
 		pointsGeom->addPrimitiveSet(elements);
+        pointsGeom->setUseDisplayList( false ); // Turn off; on by default.
 		pointsGeom->setUseVertexBufferObjects(true); // makes a significant difference in performance
         
         // add the points geometry to the geode.
