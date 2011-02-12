@@ -116,7 +116,7 @@ void UserInteraction::defaultDetection( InteractorContainer& interactors, const 
     newInteractor._location = minLoc;
     newInteractor._distance = minVal;
     newInteractor._active = ( minVal < _defaultDetectionThreshold );
-    std::cout << "Active: " << newInteractor._active << " because: " << minVal << " and " << _defaultDetectionThreshold << std::endl;
+    //std::cout << "Active: " << newInteractor._active << " because: " << minVal << " and " << _defaultDetectionThreshold << std::endl;
     interactors.push_back( newInteractor );
 }
 
