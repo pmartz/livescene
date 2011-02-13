@@ -118,8 +118,11 @@ int main()
 	centeringTransform->addChild(kinectTransform);
 	viewer.setSceneData(centeringTransform);
 
-	bool oneShot(false);
+	bool debugOneShot(false), firstFrame(true);
 	
+	// retain the scene data object from frame to frame to improve reuse
+	osg::ref_ptr<osg::Geode> liveScene;
+
 	for(bool keepGoing(true); keepGoing && !viewer.done(); )
     {
 		bool goodRGB(false), goodZ(false);
@@ -160,31 +163,30 @@ int main()
 			//geometryBuilder.buildFaces(foreZ, &imageRGB); // using isolated background
 
 
-			// build a new scene object on every frame
-			osg::ref_ptr<osg::Geode> liveScene;
-
-			if(!oneShot)
+			if(!debugOneShot)
 			{
-				//oneShot = true;
-			//geometryBuilder.buildFaces(imageZ, &imageRGB); // do it without background isolation
-			geometryBuilder.buildFaces(background.getBackgroundZ(), &background.getBackgroundRGB()); // do it without background isolation
+				//debugOneShot = true;
+				//geometryBuilder.buildFaces(imageZ, &imageRGB); // do it without background isolation
+				geometryBuilder.buildFaces(background.getBackgroundZ(), &background.getBackgroundRGB()); // do it without background isolation
 
-			//liveScene = livescene::buildOSGPointCloudCopy(geometryBuilder);
-			liveScene = livescene::buildOSGPolyMeshCopy(geometryBuilder);
+				//liveScene = livescene::buildOSGPointCloudCopy(geometryBuilder, liveScene);
+				liveScene = livescene::buildOSGPolyMeshCopy(geometryBuilder, liveScene);
 
-			// link the new data into the scene graph
-			kinectTransform->removeChildren(0, 1); // this should throw away the removed child
-			kinectTransform->addChild(liveScene);
+				// link the new data into the scene graph and setup texturing if this is the first frame
+				if(firstFrame)
+				{
+					kinectTransform->addChild(liveScene);
+					// setup texturing
+					osg::StateSet* stateSet = liveScene->getOrCreateStateSet();
+					stateSet->setTextureAttributeAndModes( 0, tex );
+					firstFrame = false;
+				} // if
 
-			// setup texturing
-			osg::StateSet* stateSet = liveScene->getOrCreateStateSet();
-			stateSet->setTextureAttributeAndModes( 0, tex );
 
+				image->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
+					GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(persistentImageRGB.getData()), osg::Image::NO_DELETE );
 
-			image->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
-				GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(persistentImageRGB.getData()), osg::Image::NO_DELETE );
-
-			//osgDB::writeNodeFile(*viewer.getSceneData(), "largescene.osg");
+				//osgDB::writeNodeFile(*viewer.getSceneData(), "largescene.osg");
 			} // oneshot
 
 			viewer.frame();

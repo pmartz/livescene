@@ -246,7 +246,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloud(const livescene::Geometry &geome
 The supplied Geometry object must already have had buildPointCloud() called on it.
 Copies the contents of the livescene::Geometry object's arrays, so it's slower, but simpler.
 */
-LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &geometry);
+LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &geometry, osg::ref_ptr<osg::Geode> &geode);
 
 
 
@@ -264,7 +264,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMesh(const livescene::Geometry &geometr
 The supplied Geometry object must already have had buildPointCloud() called on it.
 Copies the contents of the livescene::Geometry object's arrays, so it's slower, but simpler.
 */
-LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &geometry);
+LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &geometry, osg::ref_ptr<osg::Geode> &geode);
 
 
 
