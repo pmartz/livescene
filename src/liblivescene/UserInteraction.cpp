@@ -16,7 +16,8 @@ namespace livescene {
 
 UserInteraction::UserInteraction( osgViewer::GraphicsWindow& window )
   : _window( window ),
-    _defaultDetectionThreshold( 600 ),
+    _defaultDetectionThreshold( 700 ),
+    _defaultActiveThreshold( 500 ),
     _defaultSendEventsButton( 1 ),
     _defaultSendEventsPunchMaxAge( 9 )
 {
@@ -74,7 +75,8 @@ void UserInteraction::defaultDetection( InteractorContainer& interactors, const 
     int width = imageZ.getWidth();
     int height = imageZ.getHeight();
 
-    unsigned short minVal( 0xffff );
+    unsigned short undetected( 0xffff );
+    unsigned short minVal( undetected );
     osg::Vec2s minLoc;
     int sdx, tdx;
     for( tdx=0; tdx<height; tdx++ )
@@ -110,14 +112,19 @@ void UserInteraction::defaultDetection( InteractorContainer& interactors, const 
         }
     }
 
-    Interactor newInteractor;
-    newInteractor._name = "single hand";
-    newInteractor._id = 121;
-    newInteractor._location = minLoc;
-    newInteractor._distance = minVal;
-    newInteractor._active = ( minVal < _defaultDetectionThreshold );
-    //std::cout << "Active: " << newInteractor._active << " because: " << minVal << " and " << _defaultDetectionThreshold << std::endl;
-    interactors.push_back( newInteractor );
+    if( minVal < undetected )
+    {
+        Interactor newInteractor;
+        newInteractor._name = "single hand";
+        newInteractor._id = 121;
+        newInteractor._location = minLoc;
+        newInteractor._distance = minVal;
+        newInteractor._active = ( minVal < getDefaultActiveThreshold() );
+        std::cout << "Active: " << newInteractor._active << " because: " << minVal << " and " << getDefaultActiveThreshold() << std::endl;
+        interactors.push_back( newInteractor );
+    }
+    else
+        std::cout << "Undetected. minVal: " << minVal << std::endl;
 }
 
 void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, InteractorContainer& newInteractors )
@@ -174,10 +181,17 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
                 //std::cout << " " << x << ", " << y << std::endl;
                 eq->mouseButtonPress( x, y, _defaultSendEventsButton );
             }
-            else if( current._active && previous._active )
+            else
             {
-                //std::cout << "DRAG " << current._location;
-                //std::cout << " " << x << ", " << y << std::endl;
+                // Regardless of active/inactive status, issue a mouse
+                // motion event.
+                /*
+                if( current._active )
+                    std::cout << "DRAG ";
+                else
+                    std::cout << "MOVE ";
+                std::cout << current._location << "  " << x << ", " << y << std::endl;
+                */
                 eq->mouseMotion( x, y );
             }
             if( !current._active )
@@ -229,6 +243,15 @@ void UserInteraction::setDefaultDetectionThreshold( unsigned short distance )
 unsigned short UserInteraction::getDefaultDetectionThreshold() const
 {
     return( _defaultDetectionThreshold );
+}
+
+void UserInteraction::setDefaultActiveThreshold( unsigned short distance )
+{
+    _defaultActiveThreshold = distance;
+}
+unsigned short UserInteraction::getDefaultActiveThreshold() const
+{
+    return( _defaultActiveThreshold );
 }
 
 void UserInteraction::setDefaultSendEventsButton( int button )

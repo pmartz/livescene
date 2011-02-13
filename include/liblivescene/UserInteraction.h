@@ -122,8 +122,17 @@ public:
     LIVESCENE_EXPORT void setContactEventMap( const ContactEventMap& map );
     LIVESCENE_EXPORT void getContactEventMap( ContactEventMap& map );
 
+    /** Specify the distance to detect a hand. This is the inactive distance,
+    and should be a larger value than the setDefaultActiveThreshold.
+    */
     LIVESCENE_EXPORT void setDefaultDetectionThreshold( unsigned short distance );
     LIVESCENE_EXPORT unsigned short getDefaultDetectionThreshold() const;
+
+    /** Specify the distance to detect an active hand. This is the active distance,
+    and should be a smaller value than the setDefaultDetectionThreshold.
+    */
+    LIVESCENE_EXPORT void setDefaultActiveThreshold( unsigned short distance );
+    LIVESCENE_EXPORT unsigned short getDefaultActiveThreshold() const;
 
     // 1=left, 2=middle, 3=right
     LIVESCENE_EXPORT void setDefaultSendEventsButton( int button );
@@ -170,6 +179,7 @@ protected:
     ContactEventMap _eventMap;
 
     unsigned short _defaultDetectionThreshold;
+    unsigned short _defaultActiveThreshold;
     int _defaultSendEventsButton;
     unsigned int _defaultSendEventsPunchMaxAge;
 };
