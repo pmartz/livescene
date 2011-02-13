@@ -98,7 +98,7 @@ int main()
     osgGA::TrackballManipulator* tbm = new osgGA::TrackballManipulator();
     viewer.setCameraManipulator( tbm );
 
-    bool backgroundEstablished(false);
+    int backgroundEstablished(0);
 	livescene::Background background;
 
 	livescene::Geometry geometryBuilder;
@@ -139,10 +139,15 @@ int main()
 		if(goodRGB && goodZ)
 		{
 
-			if(!backgroundEstablished)
+			if(backgroundEstablished == 0) // load initial frame
 			{ // store a background clean plate
 				background.loadBackgroundFromCleanPlate(imageRGB, imageZ);
-				backgroundEstablished = true;
+				backgroundEstablished++;
+			} // if
+			else if(backgroundEstablished < 30) // accumulate 30 frames averaged
+			{ // store a background clean plate
+				background.accumulateBackgroundFromCleanPlate(imageRGB, imageZ, livescene::Background::AVERAGE_Z);
+				backgroundEstablished++;
 			} // if
 
 			livescene::Image persistentImageRGB(imageRGB, true); // test making a persistent copy
@@ -153,22 +158,34 @@ int main()
 			//geometryBuilder.buildPointCloud(imageZ, &imageRGB); // do it without background isolation
 
 			//geometryBuilder.buildFaces(foreZ, &imageRGB); // using isolated background
-			geometryBuilder.buildFaces(imageZ, &imageRGB); // do it without background isolation
+
 
 			// build a new scene object on every frame
 			osg::ref_ptr<osg::Geode> liveScene;
+
+			if(!oneShot)
+			{
+				//oneShot = true;
+			//geometryBuilder.buildFaces(imageZ, &imageRGB); // do it without background isolation
+			geometryBuilder.buildFaces(background.getBackgroundZ(), &background.getBackgroundRGB()); // do it without background isolation
+
 			//liveScene = livescene::buildOSGPointCloudCopy(geometryBuilder);
 			liveScene = livescene::buildOSGPolyMeshCopy(geometryBuilder);
+
+			// link the new data into the scene graph
+			kinectTransform->removeChildren(0, 1); // this should throw away the removed child
+			kinectTransform->addChild(liveScene);
 
 			// setup texturing
 			osg::StateSet* stateSet = liveScene->getOrCreateStateSet();
 			stateSet->setTextureAttributeAndModes( 0, tex );
 
+
 			image->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
 				GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(persistentImageRGB.getData()), osg::Image::NO_DELETE );
 
-			kinectTransform->removeChildren(0, 1); // this should throw away the removed child
-			kinectTransform->addChild(liveScene);
+			//osgDB::writeNodeFile(*viewer.getSceneData(), "largescene.osg");
+			} // oneshot
 
 			viewer.frame();
 		} // if
