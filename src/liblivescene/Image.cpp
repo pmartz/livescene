@@ -16,6 +16,7 @@ Image::Image(const Image &image, bool cloneData)
 	_depth = image._depth;
 	_format = image._format;
 	_timestamp = image._timestamp;
+	_nullValue = image._nullValue;
 	if(cloneData)
 	{
 		allocData(); // create a new image buffer
@@ -47,6 +48,7 @@ Image & Image::operator= (const Image & rhs)
 	_depth = rhs._depth;
 	_format = rhs._format;
 	_timestamp = rhs._timestamp;
+	_nullValue = rhs._nullValue;
 	if(rhs._dataSelfAllocated) // rhs owns its data, make our own copy of it
 	{
 		allocData(); // create a new image buffer

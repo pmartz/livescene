@@ -62,7 +62,7 @@ public:
 	/** Build quads geometry vertex, normal and texcoord arrays from Z buffer, with optional nulling.
 	This utilizes a hidden temporary buffer so as not to reallocate on each frame. Do not change image resolution
 	once you've started using buildFaces(). */
-	bool buildFaces(const livescene::Image &imageZ, livescene::Image *imageRGB);
+	bool buildFaces(const livescene::Image &imageZ, const livescene::Image *imageRGB);
 
 private:
 	short *_vertices;

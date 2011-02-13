@@ -39,7 +39,7 @@ class LIVESCENE_EXPORT Image
 		/**  */
 		Image(const Image &image, bool cloneData = false); // copy constructor can make a local, persistent copy of the data
 		Image(int width = 640, int height = 480, int depth = 1, VideoFormat format = VIDEO_RGB)
-			: _width(width), _height(height), _depth(depth), _format(format), _timestamp(0), _nullValue(0), _data(0), _dataSelfAllocated(false)
+			: _width(width), _height(height), _depth(depth), _format(format), _timestamp(0), _nullValue(0), _data(0), _accumulation(1), _dataSelfAllocated(false)
 		{}
 		~Image();
 
@@ -58,6 +58,11 @@ class LIVESCENE_EXPORT Image
 		unsigned long getTimestamp(void) const {return(_timestamp);}
 		void setTimestamp(const unsigned long Timestamp) {_timestamp = Timestamp;}
 
+		// accumulation is used in averaging multiple frames together (limited by precision)
+		int getAccumulation(void) const {return(_accumulation);}
+		void increaseAccumulation(void) {++_accumulation;}
+		void clearAccumulation(void) {_accumulation = 1;} // no sense to have zero data recorded
+
 		int getNull(void) const {return(_nullValue);}
 		void setNull(int newNull) {_nullValue = newNull;}
 
@@ -68,7 +73,7 @@ class LIVESCENE_EXPORT Image
 		void freeData(void);
 		void allocData(void);
 
-		int _width, _height, _depth, _nullValue;
+		int _width, _height, _depth, _nullValue, _accumulation;
 		VideoFormat _format;
         unsigned long _timestamp;
 		void *_data; // this is not resource tracked or freed, it's just a dumb pointer for transport

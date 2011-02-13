@@ -27,6 +27,71 @@ bool Background::loadZBackgroundFromCleanPlate(const livescene::Image &cleanPlat
 } // Background::loadZBackgroundFromCleanPlate
 
 
+bool Background::accumulateBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB, const livescene::Image &cleanPlateZ, AccumulateMode mode)
+{
+	bool successZ(false), successRGB(false);
+	successRGB = accumulateRGBBackgroundFromCleanPlate(cleanPlateRGB, mode);
+	successZ = accumulateZBackgroundFromCleanPlate(cleanPlateZ, mode);
+	return(successRGB && successZ);
+} // Background::accumulateBackgroundFromCleanPlate
+
+
+bool Background::accumulateRGBBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB, AccumulateMode mode)
+{
+return(false); // <<<>>> not implemented
+} // Background::accumulateRGBBackgroundFromCleanPlate
+
+
+bool Background::accumulateZBackgroundFromCleanPlate(const livescene::Image &cleanPlateZ, AccumulateMode mode)
+{
+	const int maxSample = _bgZ.getSamples();
+	const float accumWeight = 1.0f / (cleanPlateZ.getAccumulation() + 1.0f); // only used in AVERAGE mode
+	unsigned short *bgZData = (unsigned short *)_bgZ.getData();
+	unsigned short *cleanZData = (unsigned short *)cleanPlateZ.getData();
+	unsigned short cleanZnull = (unsigned short)cleanPlateZ.getNull();
+	for(int sample = 0; sample < maxSample; sample++)
+	{
+		const int cleanZsample = cleanZData[sample];
+		if(cleanZsample != cleanZnull)
+		{
+			switch(mode)
+			{
+			case MIN_Z:
+				{
+					if(cleanZsample < bgZData[sample])
+					{
+						bgZData[sample] = cleanZsample;
+					} // if
+					break;
+				} // MIN_Z
+			case MAX_Z:
+				{
+					if(cleanZsample > bgZData[sample])
+					{
+						bgZData[sample] = cleanZsample;
+					} // if
+					break;
+				} // MAX_Z
+			case AVERAGE_Z:
+				{
+					if(bgZData[sample] == cleanZnull)
+					{ // just overwrite no-data value
+						bgZData[sample] = cleanZsample; 
+					} // if
+					else
+					{ // average together existing data values
+						bgZData[sample] = (unsigned short)(accumWeight * ((float)bgZData[sample] + (float)cleanZsample));
+					} // else
+					break;
+				} // AVERAGE_Z
+			} // mode
+		} // if not null
+	} // for
+
+return(true);
+} // Background::accumulateZBackgroundFromCleanPlate
+
+
 // <<<>>> not yet implemented, accumulate non-changing pixels from live stream into background
 bool Background::accumulateBackgroundFromLive(const livescene::Image &liveRGB, const livescene::Image &liveZ)
 {

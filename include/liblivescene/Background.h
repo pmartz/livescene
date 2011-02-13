@@ -33,10 +33,20 @@ class LIVESCENE_EXPORT Background
 		void setDiscriminationEpsilonPercent(const float discriminationEpsilonPercent) {_discriminationEpsilonPercent = discriminationEpsilonPercent;}
 		float getDiscriminationEpsilonPercent(void) const {return(_discriminationEpsilonPercent);}
 
+		/** Comparison/accumulation mode to use when accumulating background
+		*/
+		enum AccumulateMode {
+			MIN_Z,
+			MAX_Z,
+			AVERAGE_Z,
+		};
+
 		bool loadBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB, const livescene::Image &cleanPlateZ);
-		//bool accumulateBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB, const livescene::Image &cleanPlateZ);
 		bool loadRGBBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB);
 		bool loadZBackgroundFromCleanPlate(const livescene::Image &cleanPlateZ);
+		bool accumulateBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB, const livescene::Image &cleanPlateZ, AccumulateMode mode);
+		bool accumulateRGBBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB, AccumulateMode mode);
+		bool accumulateZBackgroundFromCleanPlate(const livescene::Image &cleanPlateZ, AccumulateMode mode);
 
 		// <<<>>> not yet implemented, accumulate non-changing pixels from live stream into background
 		bool accumulateBackgroundFromLive(const livescene::Image &liveRGB, const livescene::Image &liveZ);
@@ -46,6 +56,10 @@ class LIVESCENE_EXPORT Background
 		// extracts the foreground from the background plate.
 		// foregroundZ must be prepped with Image::preAllocate
 		bool extractZBackground(const livescene::Image &liveZ, livescene::Image &foregroundZ);
+
+		// these can be used to display the background independently
+		const livescene::Image &getBackgroundZ(void) const {return(_bgZ);}
+		const livescene::Image &getBackgroundRGB(void) const {return(_bgRGB);}
 
 	private:
 		livescene::Image _bgRGB, _bgZ;

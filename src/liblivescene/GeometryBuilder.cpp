@@ -103,7 +103,7 @@ bool Geometry::buildPointCloud(const livescene::Image &imageZ, livescene::Image 
 } // buildPointCloud
 
 
-bool Geometry::buildFaces(const livescene::Image &imageZ, livescene::Image *imageRGB)
+bool Geometry::buildFaces(const livescene::Image &imageZ, const livescene::Image *imageRGB)
 {
 	// define our "unused" value, since 0 is a valid value
 	const unsigned int _tempBufferUnusedValue = std::numeric_limits<unsigned int>::max();
