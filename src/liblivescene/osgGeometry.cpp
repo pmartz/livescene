@@ -293,6 +293,30 @@ osg::Matrix makeDeviceToWorldMatrix( const int width, const int height, const in
     return( invWindow * yNegativeScale * invNDC * invProj );
 }
 
+void transform( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image imageZ )
+{
+    const int width = imageZ.getWidth();
+    const int height = imageZ.getHeight();
+    const int numVectors = width * height;
+    vec->resize( numVectors );
+
+    // TBD How do we know this is unsigned short.
+    unsigned short* dataPtr = ( unsigned short* )( imageZ.getData() );
+    int sdx, tdx, vdx( 0 );
+    for( tdx=0; tdx<height; tdx++ )
+    {
+        for( sdx=0; sdx<width; sdx++ )
+        {
+            osg::Vec4 deviceCoord( sdx, tdx, *dataPtr++, 1. );
+            osg::Vec4 clipCoord = deviceCoord * m;
+            osg::Vec3 eyeCoord( clipCoord[0]/clipCoord[3],
+                clipCoord[1]/clipCoord[3], clipCoord[2]/clipCoord[3] );
+            (*vec)[ vdx++ ] = eyeCoord;
+        }
+    }
+    vec->dirty();
+}
+
 
 
 LIVESCENE_EXPORT osg::MatrixTransform* buildOSGTextureMatrixTransform(void)

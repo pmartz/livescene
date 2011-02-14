@@ -287,7 +287,9 @@ come from the device, but are currently hardcoded.
 */
 LIVESCENE_EXPORT osg::Matrix makeDeviceToWorldMatrix( const int width, const int height, const int depth /*, TBD Device device */ );
 
-
+/**
+*/
+LIVESCENE_EXPORT void transform( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image imageZ );
 
 
 // namespace livescene
