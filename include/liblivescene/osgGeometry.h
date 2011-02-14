@@ -238,7 +238,7 @@ The supplied Geometry object must already have had buildPointCloud() called on i
 Utilizes the arrays already stored in the livescene::Geometry object without copying.
 // <<<>>> this function does NOT currently work!
 */
-LIVESCENE_EXPORT osg::Geode* buildOSGPointCloud(const livescene::Geometry &geometry);
+LIVESCENE_EXPORT osg::Geode* buildOSGPointCloud(const livescene::Geometry &geometry, osg::Vec4 baseColor = osg::Vec4(1.0, 1.0, 1.0, 1.0));
 
 
 
@@ -246,7 +246,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloud(const livescene::Geometry &geome
 The supplied Geometry object must already have had buildPointCloud() called on it.
 Copies the contents of the livescene::Geometry object's arrays, so it's slower, but simpler.
 */
-LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &geometry, osg::ref_ptr<osg::Geode> &geode);
+LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &geometry, osg::ref_ptr<osg::Geode> &geode, osg::Vec4 baseColor = osg::Vec4(1.0, 1.0, 1.0, 1.0));
 
 
 
@@ -256,7 +256,7 @@ The supplied Geometry object must already have had buildPointCloud() called on i
 Utilizes the arrays already stored in the livescene::Geometry object without copying.
 // <<<>>> this function does NOT currently work!
 */
-LIVESCENE_EXPORT osg::Geode* buildOSGPolyMesh(const livescene::Geometry &geometry);
+LIVESCENE_EXPORT osg::Geode* buildOSGPolyMesh(const livescene::Geometry &geometry, osg::Vec4 baseColor = osg::Vec4(1.0, 1.0, 1.0, 1.0));
 
 
 
@@ -264,7 +264,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMesh(const livescene::Geometry &geometr
 The supplied Geometry object must already have had buildPointCloud() called on it.
 Copies the contents of the livescene::Geometry object's arrays, so it's slower, but simpler.
 */
-LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &geometry, osg::ref_ptr<osg::Geode> &geode);
+LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &geometry, osg::ref_ptr<osg::Geode> &geode, osg::Vec4 baseColor = osg::Vec4(1.0, 1.0, 1.0, 1.0));
 
 
 

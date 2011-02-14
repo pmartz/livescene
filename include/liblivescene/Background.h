@@ -22,7 +22,7 @@ namespace livescene {
 class LIVESCENE_EXPORT Background
 {
 	public:
-		Background() : _backgroundAvailable(false), _discriminationEpsilonPercent(.03f) {};
+		Background() : _backgroundAvailable(false), _discriminationEpsilonPercent(.01f) {};
 		~Background() {};
 
 		bool getBackgroundAvailable(void) const {return(_backgroundAvailable);}

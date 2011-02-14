@@ -57,12 +57,12 @@ public:
 
 	/** Build point cloud geometry vertex, and optional texcoord arrays from Z buffer, with optional nulling.
 	imageZ is required, imageRGB is optional can can be NULL. Returns NULL for failure. */
-	bool buildPointCloud(const livescene::Image &imageZ, livescene::Image *imageRGB);
+	bool buildPointCloud(const livescene::Image &imageZ, const livescene::Image * const imageRGB);
 
 	/** Build quads geometry vertex, normal and texcoord arrays from Z buffer, with optional nulling.
 	This utilizes a hidden temporary buffer so as not to reallocate on each frame. Do not change image resolution
 	once you've started using buildFaces(). */
-	bool buildFaces(const livescene::Image &imageZ, const livescene::Image *imageRGB);
+	bool buildFaces(const livescene::Image &imageZ, const livescene::Image * const imageRGB);
 
 private:
 	short *_vertices;
@@ -71,7 +71,6 @@ private:
 	float *_normals;
 	float *_texcoord;
 	int _width, _height;
-	int _zNull;
 	float _meshEpsilonPercent;
 	GeometryEntityType _entityType;
 
@@ -83,7 +82,6 @@ private:
 	void allocTempBuffer(void);
 	void clearTempBuffer(const unsigned int &_clearValue);
 
-	inline bool isCellValueValid(const short &value) {return(value != _zNull && value != 0);}
 	inline bool isTriRangeMeshable(const short &valueA, const short &valueB, const short &valueC)
 	{
 		short delta = (short)((float)valueA * _meshEpsilonPercent);

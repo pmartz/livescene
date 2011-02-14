@@ -51,7 +51,7 @@ void Geometry::clearTempBuffer(const unsigned int &_clearValue)
 
 
 
-bool Geometry::buildPointCloud(const livescene::Image &imageZ, livescene::Image *imageRGB)
+bool Geometry::buildPointCloud(const livescene::Image &imageZ, const livescene::Image * const imageRGB)
 {
 	_entityType = GEOMETRY_POINTS;
 	_width = imageZ.getWidth();
@@ -72,7 +72,6 @@ bool Geometry::buildPointCloud(const livescene::Image &imageZ, livescene::Image 
 
 	// loop logic taken from libfreenect glpclview, DrawGLScene()
 	unsigned int loopSub(0), vertSub(0), indexSub(0), texSub(0), normSub(0);
-	_zNull = imageZ.getNull();
 	for(int line = 0; line < height; line++)
 	{
 		const float lineTC = (float)line / (float)height;
@@ -80,7 +79,7 @@ bool Geometry::buildPointCloud(const livescene::Image &imageZ, livescene::Image 
 		{
 			const float columnTC = (float)column / (float)width;
 			short originalDepth = depthBuffer[loopSub];
-			if(isCellValueValid(originalDepth))
+			if(imageZ.isCellValueValid(originalDepth))
 			{
 				//_indices[indexSub] = vertSub;
 				_vertices[vertSub++] = column;
@@ -103,7 +102,7 @@ bool Geometry::buildPointCloud(const livescene::Image &imageZ, livescene::Image 
 } // buildPointCloud
 
 
-bool Geometry::buildFaces(const livescene::Image &imageZ, const livescene::Image *imageRGB)
+bool Geometry::buildFaces(const livescene::Image &imageZ, const livescene::Image * const imageRGB)
 {
 	// define our "unused" value, since 0 is a valid value
 	const unsigned int _tempBufferUnusedValue = std::numeric_limits<unsigned int>::max();
@@ -140,7 +139,6 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, const livescene::Image
 	// if the split runs LL-UR, it will try to do so. This reduces sawtooth edges
 	// along borders between data and no-data.
 	unsigned int loopSub(0), vertSub(0), vertCount(0), indexSub(0), texSub(0), normSub(0), polyCount(0);
-	_zNull = imageZ.getNull();
 	for(int line = 0; line < height - 1; line++) // NOTE: height - 1
 	{
 		const float lineTC = (float)line / (float)height;
@@ -160,13 +158,13 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, const livescene::Image
 			short depthLL = depthBuffer[loopSubPlusOneRow];
 			short depthLR = depthBuffer[loopSubPlusOneRowColumn];
 			// is top-left sample of mesh cell (at loop subscripts) non-rejected?
-			if(isCellValueValid(depthUL))
+			if(imageZ.isCellValueValid(depthUL))
 			{
 				// is LR vertex valid, allowing for potentially both polygons split UL<->LR?
-				if(isCellValueValid(depthLR))
+				if(imageZ.isCellValueValid(depthLR))
 				{ // try to form two triangles, UL, LL, LR and UL, LR, UR
 					// is LL valid, allowing UL, LL, LR?
-					if(isCellValueValid(depthLL)
+					if(imageZ.isCellValueValid(depthLL)
 						&& isTriRangeMeshable(depthUL, depthLL, depthLR))
 					{
 						// form UL, LL, LR triangle
@@ -219,7 +217,7 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, const livescene::Image
 					} // if
 					
 					// is UR valid, allowing UL, LR, UR?
-					if(isCellValueValid(depthUR)
+					if(imageZ.isCellValueValid(depthUR)
 						&& isTriRangeMeshable(depthUL, depthLR, depthUR))
 					{
 						// form UL, LR, UR triangle
@@ -272,7 +270,7 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, const livescene::Image
 					} // if
 				} // if
 				// are at least UR and LL left valid, allowing one UL, LL, UR?
-				else if(isCellValueValid(depthLL) && isCellValueValid(depthUR)
+				else if(imageZ.isCellValueValid(depthLL) && imageZ.isCellValueValid(depthUR)
 					&& isTriRangeMeshable(depthUL, depthLL, depthUR))
 				{
 					// form UL, LL, UR triangle
@@ -325,7 +323,7 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, const livescene::Image
 				} // else if
 			} // if
 			// we still might make a triangle out of UR, LR, LL if all are valid even if UL is NULL
-			else if(isCellValueValid(depthLL) && isCellValueValid(depthUR) && isCellValueValid(depthLR)
+			else if(imageZ.isCellValueValid(depthLL) && imageZ.isCellValueValid(depthUR) && imageZ.isCellValueValid(depthLR)
 				&& isTriRangeMeshable(depthLL, depthUR, depthLR))
 			{
 				// form LL, UR, LR triangle

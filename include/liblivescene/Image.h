@@ -4,6 +4,7 @@
 #define __LIVESCENE_IMAGE_H__ 1
 
 #include "liblivescene/Export.h"
+#include <cmath> // sqrt
 
 
 namespace livescene {
@@ -11,6 +12,28 @@ namespace livescene {
 
 /** \defgroup Image Image Operations */
 /*@{*/
+
+class ImageStatistics
+{
+public:
+	ImageStatistics() : _mean(0.0), _min(0.0), _max(0.0), m_newS(0.0), m_oldM(0.0), m_oldS(0.0), _samples(0) {};
+
+	void addSample(double sample);
+	double getMedian(void) const {return((_min + _max) * 0.5);}
+	double getMean(void) const {return(_mean);}
+	double getMin(void) const {return(_min);}
+	double getMax(void) const {return(_max);}
+	double getStdDev(void) const {return(sqrt(getVariance()));}
+	double getVariance(void) const {return ( (_samples > 1) ? m_newS / (_samples - 1) : 0.0 );}
+	unsigned long int getNumSamples(void) const {return(_samples);}
+
+private:
+
+	double _mean, _min, _max;
+	double m_newS, m_oldM, m_oldS;
+	unsigned long int _samples;
+
+}; // ImageStatistics
 
 typedef enum {
 	VIDEO_RGB             = 0, /**< Decompressed RGB mode (demosaicing already done) */
@@ -65,6 +88,10 @@ class LIVESCENE_EXPORT Image
 
 		int getNull(void) const {return(_nullValue);}
 		void setNull(int newNull) {_nullValue = newNull;}
+		inline bool isCellValueValid(const short &value) const {return(value != _nullValue && value != 0);}
+
+		// calculate useful statistics, only operates on Z data, not RGB
+		bool calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ);
 
 		// this will ensure the image is allocated to the proper size and ready to write to
 		bool preAllocate(void);

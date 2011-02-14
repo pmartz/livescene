@@ -30,6 +30,8 @@ static const int NominalFrameW = 640, NominalFrameH = 480;
 
 int main()
 {
+	bool PolygonsMode(false), IsolateBackground(true), ShowBackground(true), textureForeground(false), textureBackground(true);
+	osg::Vec4 foreColor(1.0, 0.0, 0.0, 1.0), backColor(1.0, 1.0, 1.0, 1.0);
 
 	std::cout << livescene::getVersionString() << std::endl;
 
@@ -78,14 +80,23 @@ int main()
 	} // if
 
 
-	osg::ref_ptr< osg::Image > image = new osg::Image;
-    image->setDataVariance( osg::Object::DYNAMIC );
+	osg::ref_ptr< osg::Image > imageFore = new osg::Image;
+    imageFore->setDataVariance( osg::Object::DYNAMIC );
 
-    osg::ref_ptr< osg::Texture2D > tex = new osg::Texture2D;
-    tex->setDataVariance( osg::Object::DYNAMIC );
-    tex->setResizeNonPowerOfTwoHint( false );
-    tex->setTextureSize( NominalFrameW, NominalFrameH );
-    tex->setImage( image.get() );
+    osg::ref_ptr< osg::Texture2D > texFore = new osg::Texture2D;
+    texFore->setDataVariance( osg::Object::DYNAMIC );
+    texFore->setResizeNonPowerOfTwoHint( false );
+    texFore->setTextureSize( NominalFrameW, NominalFrameH );
+    texFore->setImage( imageFore.get() );
+
+	osg::ref_ptr< osg::Image > imageBack = new osg::Image;
+    imageBack->setDataVariance( osg::Object::DYNAMIC );
+
+    osg::ref_ptr< osg::Texture2D > texBack = new osg::Texture2D;
+    texBack->setDataVariance( osg::Object::DYNAMIC );
+    texBack->setResizeNonPowerOfTwoHint( false );
+    texBack->setTextureSize( NominalFrameW, NominalFrameH );
+    texBack->setImage( imageBack.get() );
 
     osgViewer::Viewer viewer;
     viewer.addEventHandler( new osgViewer::StatsHandler() );
@@ -101,7 +112,8 @@ int main()
     int backgroundEstablished(0);
 	livescene::Background background;
 
-	livescene::Geometry geometryBuilder;
+	livescene::Geometry geometryBuilderFore;
+	livescene::Geometry geometryBuilderBack;
 
 	osg::ref_ptr<osg::PositionAttitudeTransform> centeringTransform = new osg::PositionAttitudeTransform();
 	centeringTransform->setPosition(osg::Vec3( 0.109038, -0.0146183, 1.74733));
@@ -121,7 +133,8 @@ int main()
 	bool debugOneShot(false), firstFrame(true);
 	
 	// retain the scene data object from frame to frame to improve reuse
-	osg::ref_ptr<osg::Geode> liveScene;
+	osg::ref_ptr<osg::Geode> foreScene;
+	osg::ref_ptr<osg::Geode> backScene;
 
 	for(bool keepGoing(true); keepGoing && !viewer.done(); )
     {
@@ -147,44 +160,109 @@ int main()
 				background.loadBackgroundFromCleanPlate(imageRGB, imageZ);
 				backgroundEstablished++;
 			} // if
-			else if(backgroundEstablished < 30) // accumulate 30 frames averaged
+			else if(backgroundEstablished < 5) // accumulate 5 frames averaged
 			{ // store a background clean plate
 				background.accumulateBackgroundFromCleanPlate(imageRGB, imageZ, livescene::Background::AVERAGE_Z);
 				backgroundEstablished++;
 			} // if
 
-			livescene::Image persistentImageRGB(imageRGB, true); // test making a persistent copy
+			//livescene::Image persistentImageRGB(imageRGB, true); // test making a persistent copy
 
-			//foreZ.preAllocate(); // need room to write processed data to
-			//background.extractZBackground(imageZ, foreZ); // wipe out everything that is in the background plate
-			//geometryBuilder.buildPointCloud(foreZ, &imageRGB); // using isolated background
-			//geometryBuilder.buildPointCloud(imageZ, &imageRGB); // do it without background isolation
+			if(IsolateBackground)
+			{
+				foreZ.preAllocate(); // need room to write processed data to
+				background.extractZBackground(imageZ, foreZ); // wipe out everything that is in the background plate
 
-			//geometryBuilder.buildFaces(foreZ, &imageRGB); // using isolated background
+				// test calculating some stats
+				livescene::ImageStatistics statsX, statsY, statsZ;
+				foreZ.calcStatsXYZ(&statsX, &statsY, &statsZ);
+				double stddev = statsX.getStdDev();
+				//std::cout << "Samples=" << statsZ.getNumSamples() << " ZMax=" << statsZ.getMax() << " ZMin=" << statsZ.getMin() << " ZMean=" << statsZ.getMean() << " ZSD=" << statsZ.getStdDev() << std::endl;
+				//std::cout << " XMax=" << statsX.getMax() << " XMin=" << statsX.getMin() << " XMean=" << statsX.getMean() << " XSD=" << statsX.getStdDev() << std::endl;
+				//std::cout << " YMax=" << statsY.getMax() << " YMin=" << statsY.getMin() << " YMean=" << statsY.getMean() << " YSD=" << statsY.getStdDev() << std::endl << std::endl;
+				if(backgroundEstablished >= 5 && statsZ.getNumSamples() < 500) // very small amount of foreground
+				{
+					// add it to the background
+					background.accumulateBackgroundFromCleanPlate(imageRGB, imageZ, livescene::Background::MIN_Z);
+				} // if
+			} // if
+
+
+
+
 
 
 			if(!debugOneShot)
 			{
 				//debugOneShot = true;
-				//geometryBuilder.buildFaces(imageZ, &imageRGB); // do it without background isolation
-				geometryBuilder.buildFaces(background.getBackgroundZ(), &background.getBackgroundRGB()); // do it without background isolation
+				if(!PolygonsMode)
+				{ // point cloud mode
+					if(IsolateBackground)
+					{
+						geometryBuilderFore.buildPointCloud(foreZ, &imageRGB); // using isolated background
+						if(ShowBackground)
+						{
+							geometryBuilderBack.buildPointCloud(background.getBackgroundZ(), &background.getBackgroundRGB()); // build only the BG data
+							backScene = livescene::buildOSGPointCloudCopy(geometryBuilderBack, backScene, backColor);
+						} // if
+					} // if
+					else
+					{
+						geometryBuilderFore.buildPointCloud(imageZ, &imageRGB); // do it without background isolation
+					} // else
+					foreScene = livescene::buildOSGPointCloudCopy(geometryBuilderFore, foreScene, foreColor);
+				} // if
+				else
+				{ // polygon mesh mode
+					if(IsolateBackground)
+					{
+						geometryBuilderFore.buildFaces(foreZ, &imageRGB); // using isolated background
+						if(ShowBackground)
+						{
+							geometryBuilderBack.buildFaces(background.getBackgroundZ(), &background.getBackgroundRGB()); // build only the BG data
+							backScene = livescene::buildOSGPolyMeshCopy(geometryBuilderBack, backScene, backColor);
+						} // if
+					} // 
+					else
+					{
+						geometryBuilderFore.buildFaces(imageZ, &imageRGB); // do it without background isolation
+					} // else
+					foreScene = livescene::buildOSGPolyMeshCopy(geometryBuilderFore, foreScene, foreColor);
+				} // else
 
-				//liveScene = livescene::buildOSGPointCloudCopy(geometryBuilder, liveScene);
-				liveScene = livescene::buildOSGPolyMeshCopy(geometryBuilder, liveScene);
 
 				// link the new data into the scene graph and setup texturing if this is the first frame
 				if(firstFrame)
 				{
-					kinectTransform->addChild(liveScene);
-					// setup texturing
-					osg::StateSet* stateSet = liveScene->getOrCreateStateSet();
-					stateSet->setTextureAttributeAndModes( 0, tex );
+					kinectTransform->addChild(foreScene);
+					if(textureForeground)
+					{
+						// setup texturing
+						osg::StateSet* stateSetFore = foreScene->getOrCreateStateSet();
+						stateSetFore->setTextureAttributeAndModes( 0, texFore );
+					} // if
+
+					if(ShowBackground)
+					{
+						kinectTransform->addChild(backScene);
+						if(textureBackground)
+						{
+							// setup texturing
+							osg::StateSet* stateSetBack = backScene->getOrCreateStateSet();
+							stateSetBack->setTextureAttributeAndModes( 0, texBack );
+							imageBack->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
+								GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(background.getBackgroundRGB().getData()), osg::Image::NO_DELETE );
+						} // if
+					} // if
 					firstFrame = false;
 				} // if
 
 
-				image->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
-					GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(persistentImageRGB.getData()), osg::Image::NO_DELETE );
+				if(textureForeground)
+				{ // update live foreground texture
+					imageFore->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
+						GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(imageRGB.getData()), osg::Image::NO_DELETE );
+				} // if
 
 				//osgDB::writeNodeFile(*viewer.getSceneData(), "largescene.osg");
 			} // oneshot

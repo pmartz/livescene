@@ -8,6 +8,30 @@
 namespace livescene {
 
 
+void ImageStatistics::addSample(double sample)
+{
+	_samples ++;
+	if(sample < _min) _min = sample;
+	if(sample > _max) _max = sample;
+
+	// stddev refer to http://www.johndcook.com/standard_deviation.html
+    // See Knuth TAOCP vol 2, 3rd edition, page 232
+    if (_samples == 1)
+    {
+        m_oldM = _mean = sample;
+        m_oldS = 0.0;
+    }
+    else
+    {
+        _mean = m_oldM + (sample - m_oldM) / _samples;
+        m_newS = m_oldS + (sample - m_oldM) * (sample - _mean);
+
+        // set up for next iteration
+        m_oldM = _mean; 
+        m_oldS = m_newS;
+    }
+} // ImageStatistics::addSample
+
 Image::Image(const Image &image, bool cloneData)
 : _data(0), _dataSelfAllocated(false), _nullValue(0)
 {
@@ -64,6 +88,39 @@ Image & Image::operator= (const Image & rhs)
 
 return *this;
 } // Image::operator=
+
+
+bool Image::calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ)
+{
+	if(!(_format == DEPTH_10BIT || _format == DEPTH_11BIT))
+	{
+		return(false);
+	} // if
+
+	int width(getWidth()), height(getHeight());
+	short *depthBuffer = (short *)getData();
+
+	// loop logic taken from libfreenect glpclview, DrawGLScene()
+	unsigned int loopSub(0), vertSub(0), indexSub(0), texSub(0), normSub(0);
+	for(int line = 0; line < height; line++)
+	{
+		for(int column = 0; column < width; column++)
+		{
+			short originalDepth = depthBuffer[loopSub];
+			if(isCellValueValid(originalDepth))
+			{
+				if(destStatsX) destStatsX->addSample(column);
+				if(destStatsY) destStatsY->addSample(line);
+				if(destStatsZ) destStatsZ->addSample(originalDepth);
+			} // if
+			loopSub++;
+		} // for
+	} // for lines
+
+return(true);
+} // Image::calcStatsZ
+
+
 
 bool Image::preAllocate(void)
 {

@@ -7,7 +7,7 @@ namespace livescene {
 
 // <<<>>> this function does NOT currently work!
 
-LIVESCENE_EXPORT osg::Geode* buildOSGPointCloud(const livescene::Geometry &lsgeometry)
+LIVESCENE_EXPORT osg::Geode* buildOSGPointCloud(const livescene::Geometry &lsgeometry, osg::Vec4 baseColor)
 {
 	osg::ref_ptr<osg::Geode> geode;
 
@@ -42,7 +42,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloud(const livescene::Geometry &lsgeo
 
 
 
-LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &lsgeometry, osg::ref_ptr<osg::Geode> &geode)
+LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &lsgeometry, osg::ref_ptr<osg::Geode> &geode, osg::Vec4 baseColor)
 {
 	osg::ref_ptr<osg::Geometry> osggeometry;
 	bool freshGeode = false;
@@ -92,7 +92,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &l
         // in a color array.
         osg::Vec4Array* colors = new osg::Vec4Array;
         // add a white color, colors take the form r,g,b,a with 0.0 off, 1.0 full on.
-        colors->push_back(osg::Vec4(1.0f,1.0f,1.0f,1.0f));
+        colors->push_back(baseColor);
         
         // pass the color array to points geometry, note the binding to tell the geometry
         // that only use one color for the whole object.
@@ -125,7 +125,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &l
 
 
 
-LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &lsgeometry, osg::ref_ptr<osg::Geode> &geode)
+LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &lsgeometry, osg::ref_ptr<osg::Geode> &geode, osg::Vec4 baseColor)
 {
 	osg::ref_ptr<osg::Geometry> osggeometry;
 	bool freshGeode = false;
@@ -180,7 +180,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &lsg
 
 		// create the color of the geometry, one single for the whole geometry.
         osg::Vec4Array* colors = new osg::Vec4Array;
-        colors->push_back(osg::Vec4(1.0f,1.0f,1.0f,1.0f));
+        colors->push_back(baseColor);
         
         // pass the color array to geometry, note the binding to tell the geometry
         // that only use one color for the whole object.
