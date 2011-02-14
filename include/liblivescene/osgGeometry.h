@@ -268,14 +268,6 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &geo
 
 
 
-/** \brief Convenience function to build a libfreenect/glpclview style vertex transform
-matrix from scratch in OSG form.
-
-Note this is deprecated. Instead, use makeDeviceToWorldMatrix to create the matrix,
-then create your own MatrixTransform.
-*/
-LIVESCENE_EXPORT osg::MatrixTransform* buildOSGGeometryMatrixTransform(void);
-
 /** \brief Make a matrix to convert from device coordinates to world space.
 This code assumes world space is in meters.
 
@@ -287,7 +279,18 @@ come from the device, but are currently hardcoded.
 */
 LIVESCENE_EXPORT osg::Matrix makeDeviceToWorldMatrix( const int width, const int height, const int depth /*, TBD Device device */ );
 
-/**
+/** \brief Transform z image data into an OSG Vec3Array.
+For each elements of \c imageZ, compute a device coordinate vector (s, t, elementValue, 1. ),
+then transform that by the specified matrix \c m. Results are assumed to be in clip coordinates,
+and clip coord xyz values are divided by clip coord w to produve final eye coordinate xyz
+values. These are stored sequentially in \c vec.
+
+This function resizes \c vec to hold the necessary number of vectors, as computed by
+\c imageZ->getWidth() and \c imageZ->getHeight().
+
+\param vec Output. Contains the transformed output. This function marks it as dirty.
+\param m Input. Typically obtained from the makeDeviceToWorldMatrix() function.
+\param imageZ Input. Array of depth values obtained from the z camera.
 */
 LIVESCENE_EXPORT void transform( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image imageZ );
 

@@ -208,8 +208,6 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &lsg
 
 
 
-osg::MatrixTransform* buildOSGGeometryMatrixTransform(void)
-{
 #if 0
 	// code from libfreenect's glpclview
 
@@ -236,20 +234,7 @@ osg::MatrixTransform* buildOSGGeometryMatrixTransform(void)
 							mat[12], mat[13], mat[14], mat[15]);
 	mt->setMatrix(magicVertex);
 	return(mt.release());
-#else
-
-    const float width( 640.f );
-    const float height( 480.f );
-    const float depth( 1024.f ); // assumes 10-bit! Change to 2048 for 11-bit.
-    osg::Matrix matrix = makeDeviceToWorldMatrix( width, height, depth /*, device */ );
-
-	osg::ref_ptr<osg::MatrixTransform> mt = new osg::MatrixTransform;
-	mt->setMatrix( matrix );
-
-	return( mt.release() );
-
 #endif
-} // buildOSGGeometryMatrixTransform
 
 osg::Matrix makeDeviceToWorldMatrix( const int width, const int height, const int depth /*, TBD Device device */ )
 {
