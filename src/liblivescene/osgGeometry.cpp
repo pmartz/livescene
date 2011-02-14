@@ -208,7 +208,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &lsg
 
 
 
-LIVESCENE_EXPORT osg::MatrixTransform* buildOSGGeometryMatrixTransform(void)
+osg::MatrixTransform* buildOSGGeometryMatrixTransform(void)
 {
 #if 0
 	// code from libfreenect's glpclview
@@ -238,16 +238,28 @@ LIVESCENE_EXPORT osg::MatrixTransform* buildOSGGeometryMatrixTransform(void)
 	return(mt.release());
 #else
 
+    const float width( 640.f );
+    const float height( 480.f );
+    const float depth( 1024.f ); // assumes 10-bit! Change to 2048 for 11-bit.
+    osg::Matrix matrix = makeDeviceToWorldMatrix( width, height, depth /*, device */ );
+
+	osg::ref_ptr<osg::MatrixTransform> mt = new osg::MatrixTransform;
+	mt->setMatrix( matrix );
+
+	return( mt.release() );
+
+#endif
+} // buildOSGGeometryMatrixTransform
+
+osg::Matrix makeDeviceToWorldMatrix( const int width, const int height, const int depth /*, TBD Device device */ )
+{
     // These values are control parameters that will vary from
     // one device to the next. Currently putting in values that
     // closely approximate the Kinect, resulting in a net transform
     // matrix that is pretty close to the "magic matrix" used in
     // the OpenKinect project.
     const bool y0IsUp( true ); // y==0 is at the top in Kinect, so this is true.
-    const float width( 640.f );
-    const float height( 480.f );
-    const float depth( 1024.f ); // assumes 10-bit! Change to 2048 for 11-bit.
-    const float depthValuesPerMeter( 500.f ); // TBD a Guess
+    const float depthValuesPerMeter( 1000.f ); // TBD a Guess
     const float fovy( 40.f ); // TBD a guess
     const float near( 0.1f ); // TBD a guess
     const float far( depth / depthValuesPerMeter );
@@ -278,15 +290,10 @@ LIVESCENE_EXPORT osg::MatrixTransform* buildOSGGeometryMatrixTransform(void)
     // ...and invert it:
     osg::Matrix invProj( osg::Matrix::inverse( proj ) );
 
-    osg::Matrix matrix = invWindow * yNegativeScale * invNDC * invProj;
+    return( invWindow * yNegativeScale * invNDC * invProj );
+}
 
-	osg::ref_ptr<osg::MatrixTransform> mt = new osg::MatrixTransform;
-	mt->setMatrix( matrix );
 
-	return( mt.release() );
-
-#endif
-} // buildOSGGeometryMatrixTransform
 
 LIVESCENE_EXPORT osg::MatrixTransform* buildOSGTextureMatrixTransform(void)
 {

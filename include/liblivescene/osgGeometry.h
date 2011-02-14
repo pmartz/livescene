@@ -270,8 +270,22 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &geo
 
 /** \brief Convenience function to build a libfreenect/glpclview style vertex transform
 matrix from scratch in OSG form.
+
+Note this is deprecated. Instead, use makeDeviceToWorldMatrix to create the matrix,
+then create your own MatrixTransform.
 */
 LIVESCENE_EXPORT osg::MatrixTransform* buildOSGGeometryMatrixTransform(void);
+
+/** \brief Make a matrix to convert from device coordinates to world space.
+This code assumes world space is in meters.
+
+This code is currently incomplete. Paramters for constructing the matrix should
+come from the device, but are currently hardcoded.
+\param width Width of a z image obtained from the camera (i.e., 640).
+\param height Height of a z image obtained from the camera (i.e., 480).
+\param depth Maximum depth value (i.e., 1024 for 10-bit, 2048 for 11-bit).
+*/
+LIVESCENE_EXPORT osg::Matrix makeDeviceToWorldMatrix( const int width, const int height, const int depth /*, TBD Device device */ );
 
 
 
