@@ -278,7 +278,7 @@ osg::Matrix makeDeviceToWorldMatrix( const int width, const int height, const in
     return( invWindow * yNegativeScale * invNDC * invProj );
 }
 
-void transform( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image imageZ )
+int transform( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image imageZ, const unsigned short invalid )
 {
     const int width = imageZ.getWidth();
     const int height = imageZ.getHeight();
@@ -292,14 +292,19 @@ void transform( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Imag
     {
         for( sdx=0; sdx<width; sdx++ )
         {
-            osg::Vec4 deviceCoord( sdx, tdx, *dataPtr++, 1. );
-            osg::Vec4 clipCoord = deviceCoord * m;
-            osg::Vec3 eyeCoord( clipCoord[0]/clipCoord[3],
-                clipCoord[1]/clipCoord[3], clipCoord[2]/clipCoord[3] );
-            (*vec)[ vdx++ ] = eyeCoord;
+            unsigned short value = *dataPtr++;
+            if( ( value != imageZ.getNull() ) && ( value != invalid ) )
+            {
+                osg::Vec4 deviceCoord( sdx, tdx, value, 1. );
+                osg::Vec4 clipCoord = deviceCoord * m;
+                osg::Vec3 eyeCoord( clipCoord[0]/clipCoord[3],
+                    clipCoord[1]/clipCoord[3], clipCoord[2]/clipCoord[3] );
+                (*vec)[ vdx++ ] = eyeCoord;
+            }
         }
     }
     vec->dirty();
+    return( vdx );
 }
 
 

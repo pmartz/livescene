@@ -291,8 +291,10 @@ This function resizes \c vec to hold the necessary number of vectors, as compute
 \param vec Output. Contains the transformed output. This function marks it as dirty.
 \param m Input. Typically obtained from the makeDeviceToWorldMatrix() function.
 \param imageZ Input. Array of depth values obtained from the z camera.
+\param invalid Values in \c imageZ equal to this value are discarded.
+\return Number of valid values (not maxZ and not Image::NULL).
 */
-LIVESCENE_EXPORT void transform( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image imageZ );
+LIVESCENE_EXPORT int transform( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image imageZ, const unsigned short invalid=2047 );
 
 
 // namespace livescene

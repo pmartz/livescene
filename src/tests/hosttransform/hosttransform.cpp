@@ -5,6 +5,7 @@
 #include <liblivescene/DeviceCapabilities.h>
 #include <liblivescene/osgGeometry.h>
 
+#include <osgDB/ReadFile>
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osgDB/WriteFile>
@@ -16,19 +17,19 @@
 
 
 osg::ref_ptr< osg::Vec3Array > vecArray;
-osg::ref_ptr< osg::Geometry > geom;
+osg::ref_ptr< osg::DrawArrays > pointsDrawArrays;
 
 osg::Node* createScene()
 {
     osg::ref_ptr< osg::Group > root = new osg::Group;
+    //root->addChild( osgDB::readNodeFile( "axes.osg" ) );
 
     osg::ref_ptr< osg::Geode > geode = new osg::Geode;
     root->addChild( geode.get() );
     osg::StateSet* stateSet = geode->getOrCreateStateSet();
     stateSet->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
 
-    geom = new osg::Geometry;
-    geom->setDataVariance( osg::Object::DYNAMIC );
+    osg::ref_ptr< osg::Geometry > geom = new osg::Geometry;
     geom->setUseDisplayList( false );
     geom->setUseVertexBufferObjects( true );
 
@@ -41,7 +42,9 @@ osg::Node* createScene()
     geom->setColorArray( c );
     geom->setColorBinding( osg::Geometry::BIND_OVERALL );
 
-    geom->addPrimitiveSet( new osg::DrawArrays( GL_POINTS, 0, 640*480 ) );
+    pointsDrawArrays = new osg::DrawArrays( GL_POINTS, 0, 640*480 );
+    pointsDrawArrays->setDataVariance( osg::Object::DYNAMIC );
+    geom->addPrimitiveSet( pointsDrawArrays.get() );
     geode->addDrawable( geom.get() );
 
     return( root.release() );
@@ -88,9 +91,6 @@ int main()
     viewer.setUpViewInWindow( 30, 30, 800, 600 );
     viewer.setSceneData( root.get() );
 
-    osgGA::TrackballManipulator* tbm = new osgGA::TrackballManipulator();
-    viewer.setCameraManipulator( tbm );
-
     const int nominalFrameW( 640 ), nominalFrameH( 480 ), nominalFrameD( 1024 );
     osg::Matrix d2w = livescene::makeDeviceToWorldMatrix( nominalFrameW, nominalFrameH, nominalFrameD /*, TBD Device device */ );
 
@@ -100,13 +100,14 @@ int main()
         livescene::Image imageZ( nominalFrameW, nominalFrameH, 2, livescene::DEPTH_10BIT );
         imageCapabilitiesZ->getImageSync( imageZ );
 
-        livescene::transform( vecArray.get(), d2w, imageZ );
+        int validPixels = livescene::transform( vecArray.get(), d2w, imageZ, 1023 );
+        pointsDrawArrays->setCount( validPixels );
 
         if( firstFrame )
         {
             osgDB::writeNodeFile( *root, "out.ive" );
 
-            tbm->home( 0 );
+            viewer.setCameraManipulator( new osgGA::TrackballManipulator() );
             firstFrame = false;
         }
         viewer.frame();

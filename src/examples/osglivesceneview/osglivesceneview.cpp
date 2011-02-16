@@ -106,9 +106,6 @@ int main()
 	viewer.getCamera()->setComputeNearFarMode(osgUtil::CullVisitor::DO_NOT_COMPUTE_NEAR_FAR);
     viewer.getCamera()->setProjectionMatrix( osg::Matrix::perspective( 35., 4./3., .001, 100. ) );
 
-    osgGA::TrackballManipulator* tbm = new osgGA::TrackballManipulator();
-    viewer.setCameraManipulator( tbm );
-
     int backgroundEstablished(0);
 	livescene::Background background;
 
@@ -121,8 +118,6 @@ int main()
     kinectTransform->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
 	kinectTransform->getOrCreateStateSet()->setAttribute( new osg::Point( 3.0f ), osg::StateAttribute::ON );
 	viewer.setSceneData( kinectTransform.get() );
-
-    tbm->setNode( kinectTransform.get() );
 
 	bool debugOneShot(false), firstFrame(true);
 	
@@ -250,7 +245,7 @@ int main()
 					} // if
 
                     // Go to the initial position.
-                    tbm->home( 0 );
+                    viewer.setCameraManipulator( new osgGA::TrackballManipulator() );
 
 					firstFrame = false;
 				} // if
