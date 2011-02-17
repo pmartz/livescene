@@ -271,7 +271,7 @@ osg::Matrix makeDeviceToWorldMatrix( const int width, const int height, const in
     }
 
     // Create what we think is the projection matrix:
-    osg::Matrix proj( osg::Matrix::perspective( fovy, width/height, near, far ) );
+    osg::Matrix proj( osg::Matrix::perspective( fovy, (float)width/(float)height, near, far ) );
     // ...and invert it:
     osg::Matrix invProj( osg::Matrix::inverse( proj ) );
 
