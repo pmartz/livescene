@@ -48,14 +48,14 @@ void characteristics( unsigned short* buf )
 
     // TBD ignore rightmost 8 columns, they are always max distance.
     unsigned short sdx, tdx;
-    for( tdx=0; tdx<FREENECT_FRAME_H; tdx++ )
+    for( tdx=0; tdx<FREENECT_FRAME_H; ++tdx )
     {
-        for( sdx=0; sdx<FREENECT_FRAME_W; sdx++ )
+        for( sdx=0; sdx<FREENECT_FRAME_W; ++sdx )
         {
             if( sdx > FREENECT_FRAME_W-8 )
             {
                 // rightmost 8 columns are always max depth. Ignore them.
-                ptr++;
+                ++ptr;
                 continue;
             }
             if( *ptr > maxVal )
@@ -68,7 +68,7 @@ void characteristics( unsigned short* buf )
                 minVal = *ptr;
                 minLoc.set( sdx, tdx );
             }
-            ptr++;
+            ++ptr;
         }
     }
     //std::cout << "Max depth value: " << maxVal << " at " << maxLoc << std::endl;
@@ -79,12 +79,12 @@ void scale( unsigned short* buf )
     unsigned short* ptr = buf;
 
     unsigned short sdx, tdx;
-    for( tdx=0; tdx<FREENECT_FRAME_H; tdx++ )
+    for( tdx=0; tdx<FREENECT_FRAME_H; ++tdx )
     {
-        for( sdx=0; sdx<FREENECT_FRAME_W; sdx++ )
+        for( sdx=0; sdx<FREENECT_FRAME_W; ++sdx )
         {
             *ptr <<= 6;
-            ptr++;
+            ++ptr;
         }
     }
 }

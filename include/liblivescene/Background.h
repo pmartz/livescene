@@ -39,14 +39,17 @@ class LIVESCENE_EXPORT Background
 			MIN_Z,
 			MAX_Z,
 			AVERAGE_Z,
+			MIN_Z_ADJACENT,
+			MAX_Z_ADJACENT,
+			AVERAGE_Z_ADJACENT,
 		};
 
 		bool loadBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB, const livescene::Image &cleanPlateZ);
 		bool loadRGBBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB);
 		bool loadZBackgroundFromCleanPlate(const livescene::Image &cleanPlateZ);
-		bool accumulateBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB, const livescene::Image &cleanPlateZ, AccumulateMode mode);
+		bool accumulateBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB, const livescene::Image &cleanPlateZ, AccumulateMode mode, livescene::Image *foreZ = NULL);
 		bool accumulateRGBBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB, AccumulateMode mode);
-		bool accumulateZBackgroundFromCleanPlate(const livescene::Image &cleanPlateZ, AccumulateMode mode);
+		bool accumulateZBackgroundFromCleanPlate(const livescene::Image &cleanPlateZ, AccumulateMode mode, livescene::Image *foreZ = NULL);
 
 		// <<<>>> not yet implemented, accumulate non-changing pixels from live stream into background
 		bool accumulateBackgroundFromLive(const livescene::Image &liveRGB, const livescene::Image &liveZ);

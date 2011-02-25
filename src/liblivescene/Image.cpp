@@ -4,6 +4,7 @@
 #include <stdlib.h> // malloc/free
 #include <malloc.h> // malloc/free
 #include <memory.h> // memcpy
+#include <limits> // max()
 
 namespace livescene {
 
@@ -90,8 +91,87 @@ return *this;
 } // Image::operator=
 
 
-bool Image::calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ)
+unsigned int Image::patchNulls(const unsigned int &numPasses)
 {
+	unsigned int numPatched(0);
+	if(!(_format == DEPTH_10BIT || _format == DEPTH_11BIT))
+	{
+		return(false);
+	} // if
+
+	/*
+
+	int width(getWidth()), height(getHeight());
+	short *depthBuffer = (short *)getData();
+
+	// we intentionally skip scanning the outermost two lines/columns because
+	// our in-fill algorigthm can't operate out there properly. Actually, it can work
+	// on the top and left edge but there's no reason to do those edges if we're not doing
+	// the bottom and right. Skipping them eliminates repetitive error-checking in the loop.
+	unsigned int startLine(2), endLine(height - 2), // initial loop range
+		firstLine(height), lastLine(0); // extrema for next loop, initialized to inverse
+	unsigned int startCol(2), endCol(width - 2), // initial loop range
+		firstCol(width), lastCol(0); // extrema for next loop, initialized to inverse
+
+	// iterate passes
+	for(unsigned int pass(0); pass < numPasses; ++pass)
+	{
+		// reinitialize extrema-checking
+		firstLine = height; lastLine = 0;
+		fisrtCol = width; lastCol = 0;
+
+		unsigned int lineSub(0);
+		// vertically scan restricted box, which is initially entire raster
+		for(int line = startLine; line < endLine; ++line)
+		{
+			lineSub = line * width;
+			// horizontally scan restricted box, which is initially entire raster
+			for(int column = startCol; column < endCol; ++column)
+			{
+				// valid samples are assumed to be in the minority, so trigger on
+				// them, rather than on invalid samples
+				if(isCellValueValid(depthBuffer[lineSub + column]))
+				{
+					// does it have any invalid cells below/right of it that we can try to
+					// expand into?
+
+					// right
+					if(!isCellValueValid(depthBuffer[lineSub + column + 1]))
+					{
+						// is the cell past it valid, to allow a spanning?
+						if(isCellValueValid(depthBuffer[lineSub + column + 2]))
+						{
+						} // if
+					} // if
+					// down
+					if(!isCellValueValid(depthBuffer[lineSub + width + column]))
+					{
+						// is the cell past it valid, to allow a spanning?
+						if(isCellValueValid(depthBuffer[lineSub + width + width + column]))
+						{
+						} // if
+					} // if
+					// down-right
+					if(!isCellValueValid(depthBuffer[lineSub + width + column + 1]))
+					{
+						// is the cell past it valid, to allow a spanning?
+						if(isCellValueValid(depthBuffer[lineSub + width + width + column + 2]))
+						{
+						} // if
+					} // if
+				} // if
+			} // for
+		} // for lines
+	} // for passes
+	*/
+
+	return(numPatched);
+} // Image::patchNulls
+
+
+unsigned int Image::filterNoise(const unsigned int &numNeighbors)
+{
+	unsigned int numFiltered(0);
 	if(!(_format == DEPTH_10BIT || _format == DEPTH_11BIT))
 	{
 		return(false);
@@ -100,11 +180,135 @@ bool Image::calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::Imag
 	int width(getWidth()), height(getHeight());
 	short *depthBuffer = (short *)getData();
 
-	// loop logic taken from libfreenect glpclview, DrawGLScene()
-	unsigned int loopSub(0), vertSub(0), indexSub(0), texSub(0), normSub(0);
-	for(int line = 0; line < height; line++)
+	unsigned int startLine(1), endLine(height); // initial loop range
+	unsigned int startCol(1), endCol(width); // initial loop range
+
+	unsigned int lineSub(0);
+	// vertically scan 
+	for(unsigned int line = startLine; line < endLine; ++line)
 	{
-		for(int column = 0; column < width; column++)
+		lineSub = line * width;
+		// horizontally scan
+		for(unsigned int column = startCol; column < endCol; ++column)
+		{
+			// valid samples are assumed to be in the minority, so trigger on
+			// them, rather than on invalid samples
+			if(isCellValueValid(depthBuffer[lineSub + column]))
+			{
+				// does it have fewer valid neighbors than the threshold?
+				if(countValidNeighbors(column, line) < numNeighbors)
+				{
+					depthBuffer[lineSub + column] = _nullValue; // null it out
+					++numFiltered;
+				} // if
+			} // if
+		} // for
+	} // for lines
+
+	// <<<>>> should we deliberately null out the outermost lines/columns, since we can't filter them?
+
+	return(numFiltered);
+} // Image::filterNoise
+
+unsigned int Image::countValidNeighbors(const unsigned int &X, const unsigned int &Y) const
+{
+	unsigned int validNeighbors(0);
+	unsigned int width = getWidth();
+	short *depthBuffer = (short *)getData();
+
+	if(Y > 0)
+	{
+		// UL
+		if(X > 0 && isCellValueValid(depthBuffer[(Y - 1) * width + (X - 1)])) ++validNeighbors;
+		// UC
+		if(isCellValueValid(depthBuffer[(Y - 1) * width + (X)])) ++validNeighbors;
+		// UR
+		if(X < width && isCellValueValid(depthBuffer[(Y - 1) * width + (X + 1)])) ++validNeighbors;
+	} // if
+
+	// ML
+	if(X > 0 && isCellValueValid(depthBuffer[(Y) * width + (X - 1)])) ++validNeighbors;
+	// MR
+	if(X < width && isCellValueValid(depthBuffer[(Y) * width + (X + 1)])) ++validNeighbors;
+
+	if(Y < getHeight())
+	{
+		// LL
+		if(X > 0 && isCellValueValid(depthBuffer[(Y + 1) * width + (X - 1)])) ++validNeighbors;
+		// LC
+		if(isCellValueValid(depthBuffer[(Y + 1) * width + (X)])) ++validNeighbors;
+		// LR
+		if(X < width && isCellValueValid(depthBuffer[(Y + 1) * width + (X + 1)])) ++validNeighbors;
+	} // if
+
+	return(validNeighbors);
+} // Image::countValidNeighbors
+
+
+bool Image::minimumDeltaToNeighbors(const unsigned int &X, const unsigned int &Y, short cellValue, long &result) const
+{
+	unsigned int validNeighbors(0);
+	unsigned int width = getWidth();
+	short *depthBuffer = (short *)getData();
+	short depthValue, absDelta(std::numeric_limits<short>::max());
+	result = std::numeric_limits<short>::max();
+
+	// if each neighbor is valid, calculate the delta between it and the current cell, and look for the minimum delta of all of them
+
+	if(Y > 0)
+	{
+		// UL
+		if(X > 0 && isCellValueValid(depthValue = depthBuffer[(Y - 1) * width + (X - 1)])) {++validNeighbors; absDelta = abs(depthValue - cellValue); if(absDelta < result) result = absDelta; }
+		// UC
+		if(isCellValueValid(depthValue = depthBuffer[(Y - 1) * width + (X)])) {++validNeighbors; absDelta = abs(depthValue - cellValue); if(absDelta < result) result = absDelta; }
+		// UR
+		if(X < width && isCellValueValid(depthValue = depthBuffer[(Y - 1) * width + (X + 1)])) {++validNeighbors; absDelta = abs(depthValue - cellValue); if(absDelta < result) result = absDelta; }
+	} // if
+	// ML
+	if(X > 0 && isCellValueValid(depthValue = depthBuffer[(Y) * width + (X - 1)])) {++validNeighbors; absDelta = abs(depthValue - cellValue); if(absDelta < result) result = absDelta; }
+	// MR
+	if(X < width && isCellValueValid(depthValue = depthBuffer[(Y) * width + (X + 1)])) {++validNeighbors; absDelta = abs(depthValue - cellValue); if(absDelta < result) result = absDelta; }
+	if(Y < getHeight())
+	{
+		// LL
+		if(X > 0 && isCellValueValid(depthValue = depthBuffer[(Y + 1) * width + (X - 1)])) {++validNeighbors; absDelta = abs(depthValue - cellValue); if(absDelta < result) result = absDelta; }
+		// LC
+		if(isCellValueValid(depthValue = depthBuffer[(Y + 1) * width + (X)])) {++validNeighbors; absDelta = abs(depthValue - cellValue); if(absDelta < result) result = absDelta; }
+		// LR
+		if(X < width && isCellValueValid(depthValue = depthBuffer[(Y + 1) * width + (X + 1)])) {++validNeighbors; absDelta = abs(depthValue - cellValue); if(absDelta < result) result = absDelta; }
+	} // if
+
+	if(validNeighbors > 0)
+	{
+		result = absDelta;
+		return(true);
+	} // if
+	else
+	{
+		return(false);
+	} // else
+} // 
+
+
+
+bool Image::calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ)
+{
+	if(!(_format == DEPTH_10BIT || _format == DEPTH_11BIT))
+	{
+		return(false);
+	} // if
+
+	if(destStatsX) destStatsX->clear();
+	if(destStatsY) destStatsY->clear();
+	if(destStatsZ) destStatsZ->clear();
+
+	int width(getWidth()), height(getHeight());
+	short *depthBuffer = (short *)getData();
+
+	unsigned int loopSub(0), vertSub(0), indexSub(0), texSub(0), normSub(0);
+	for(int line = 0; line < height; ++line)
+	{
+		for(int column = 0; column < width; ++column)
 		{
 			short originalDepth = depthBuffer[loopSub];
 			if(isCellValueValid(originalDepth))
@@ -113,7 +317,7 @@ bool Image::calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::Imag
 				if(destStatsY) destStatsY->addSample(line);
 				if(destStatsZ) destStatsZ->addSample(originalDepth);
 			} // if
-			loopSub++;
+			++loopSub;
 		} // for
 	} // for lines
 

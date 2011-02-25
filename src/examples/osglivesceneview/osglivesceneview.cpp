@@ -24,14 +24,67 @@
 #include <osg/PositionAttitudeTransform>
 #include <osgDB/WriteFile>
 
+const int OSG_LIVESCENEVIEW_BACKGROUND_NOISE_SAMPLES(1500); // fewer than this many foreground samples in a frame are presumed to be background noise
+const int OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES(5); // Assume the first n frames are empty background, for calibration
 
 static const int NominalFrameW = 640, NominalFrameH = 480;
 
+osg::ref_ptr<osg::Group> topGroup;
+// for HUD and any other screen-space elements
+osg::ref_ptr<osg::Group> screenElementsGroup;
+osg::ref_ptr<osg::Geode> screenTextGeode;
+osg::ref_ptr<osg::Projection> screenProjection;
+osg::ref_ptr<osg::MatrixTransform> screenMatrixTransform;
+osg::ref_ptr<osgText::Text> textEntity;
+
+// some strings that get formatted together to make the HUD metadata
+std::string fgInfoStr, minDepth, maxDepth;
+
+void buildHUD(void)
+{
+	screenElementsGroup = new osg::Group();
+
+	// setup screen-space entities
+	screenTextGeode = new osg::Geode();
+	screenProjection = new osg::Projection();
+	screenProjection->setMatrix(osg::Matrix::ortho2D(0.0,1024,0,768));
+	screenMatrixTransform = new osg::MatrixTransform();
+	screenMatrixTransform->setMatrix(osg::Matrix::identity());
+	screenMatrixTransform->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+	screenElementsGroup->addChild(screenProjection);
+	screenProjection->addChild(screenMatrixTransform);
+	screenMatrixTransform->addChild(screenTextGeode);
+
+	// For this state set, turn blending on (so alpha texture looks right)
+	screenTextGeode->getOrCreateStateSet()->setMode(GL_BLEND,osg::StateAttribute::ON);
+	// Disable depth testing so geometry is drawn regardless of depth values
+	// of geometry already draw.
+	screenTextGeode->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
+	screenTextGeode->getOrCreateStateSet()->setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
+
+	// Need to make sure this geometry is drawn last. RenderBins are handled
+	// in numerical order so set bin number to 11
+	screenTextGeode->getOrCreateStateSet()->setRenderBinDetails( 11, "RenderBin");
+
+	textEntity = new osgText::Text();
+
+	// Set up the parameters for the text we'll add to the HUD:
+	textEntity->setCharacterSize(25.0);
+	textEntity->setFont("arial.ttf");
+	textEntity->setAlignment(osgText::TextBase::LEFT_TOP);
+	textEntity->setAxisAlignment(osgText::Text::SCREEN);
+	textEntity->setPosition( osg::Vec3(5.0, 762, 0.0)); // 5,5 from UL
+	textEntity->setColor( osg::Vec4(1.0, 1.0, 1.0, 1.0) );
+
+	screenTextGeode->addDrawable( textEntity );
+
+} // buildHUD
 
 int main()
 {
 	bool PolygonsMode(false), IsolateBackground(true), ShowBackground(true), textureForeground(false), textureBackground(true);
-	osg::Vec4 foreColor(1.0, 0.0, 0.0, 1.0), backColor(1.0, 1.0, 1.0, 1.0);
+	osg::Vec4 foreColor(0.0, 0.7, 1.0, 1.0), backColor(1.0, 1.0, 1.0, 1.0);
+	livescene::ImageStatistics statsX, statsY, statsZ;
 
 	std::cout << livescene::getVersionString() << std::endl;
 
@@ -79,6 +132,7 @@ int main()
 		} // if
 	} // if
 
+	topGroup = new osg::Group;
 
 	osg::ref_ptr< osg::Image > imageFore = new osg::Image;
     imageFore->setDataVariance( osg::Object::DYNAMIC );
@@ -87,6 +141,8 @@ int main()
     texFore->setDataVariance( osg::Object::DYNAMIC );
     texFore->setResizeNonPowerOfTwoHint( false );
     texFore->setTextureSize( NominalFrameW, NominalFrameH );
+    texFore->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+    texFore->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
     texFore->setImage( imageFore.get() );
 
 	osg::ref_ptr< osg::Image > imageBack = new osg::Image;
@@ -96,6 +152,8 @@ int main()
     texBack->setDataVariance( osg::Object::DYNAMIC );
     texBack->setResizeNonPowerOfTwoHint( false );
     texBack->setTextureSize( NominalFrameW, NominalFrameH );
+    texBack->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+    texBack->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
     texBack->setImage( imageBack.get() );
 
     osgViewer::Viewer viewer;
@@ -117,7 +175,14 @@ int main()
     osg::ref_ptr<osg::MatrixTransform> kinectTransform = new osg::MatrixTransform( m );
     kinectTransform->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
 	kinectTransform->getOrCreateStateSet()->setAttribute( new osg::Point( 3.0f ), osg::StateAttribute::ON );
-	viewer.setSceneData( kinectTransform.get() );
+	topGroup->addChild(kinectTransform.get());
+
+	// add HUD
+	buildHUD();
+	topGroup->addChild(screenElementsGroup.get());
+
+	// set scene data
+	viewer.setSceneData( topGroup.get() );
 
 	bool debugOneShot(false), firstFrame(true);
 	
@@ -127,7 +192,7 @@ int main()
 
 	for(bool keepGoing(true); keepGoing && !viewer.done(); )
     {
-		bool goodRGB(false), goodZ(false);
+		bool goodRGB(false), goodZ(false), noForeground(false);
 		livescene::Image imageRGB(NominalFrameW, NominalFrameH, 3, livescene::VIDEO_RGB);
 		livescene::Image imageZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT);
 		livescene::Image foreZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT); // only the foreground
@@ -147,32 +212,30 @@ int main()
 			if(backgroundEstablished == 0) // load initial frame
 			{ // store a background clean plate
 				background.loadBackgroundFromCleanPlate(imageRGB, imageZ);
-				backgroundEstablished++;
+				++backgroundEstablished;
 			} // if
-			else if(backgroundEstablished < 5) // accumulate 5 frames averaged
+			else if(backgroundEstablished < OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES) // accumulate some frames, averaged, for background calibration
 			{ // store a background clean plate
 				background.accumulateBackgroundFromCleanPlate(imageRGB, imageZ, livescene::Background::AVERAGE_Z);
-				backgroundEstablished++;
+				++backgroundEstablished;
 			} // if
-
-			//livescene::Image persistentImageRGB(imageRGB, true); // test making a persistent copy
 
 			if(IsolateBackground)
 			{
-				foreZ.preAllocate(); // need room to write processed data to
-				background.extractZBackground(imageZ, foreZ); // wipe out everything that is in the background plate
+				foreZ.preAllocate(); // need room to write processed data to (only done at start if needed, not on every frame)
+				background.extractZBackground(imageZ, foreZ); // wipe out everything that is already in the background plate
 
-				// test calculating some stats
-				livescene::ImageStatistics statsX, statsY, statsZ;
+				// calculate some stats
 				foreZ.calcStatsXYZ(&statsX, &statsY, &statsZ);
-				double stddev = statsX.getStdDev();
-				//std::cout << "Samples=" << statsZ.getNumSamples() << " ZMax=" << statsZ.getMax() << " ZMin=" << statsZ.getMin() << " ZMean=" << statsZ.getMean() << " ZSD=" << statsZ.getStdDev() << std::endl;
-				//std::cout << " XMax=" << statsX.getMax() << " XMin=" << statsX.getMin() << " XMean=" << statsX.getMean() << " XSD=" << statsX.getStdDev() << std::endl;
-				//std::cout << " YMax=" << statsY.getMax() << " YMin=" << statsY.getMin() << " YMean=" << statsY.getMean() << " YSD=" << statsY.getStdDev() << std::endl << std::endl;
-				if(backgroundEstablished >= 5 && statsZ.getNumSamples() < 500) // very small amount of foreground
+				
+				// we can only dynamically accumulate background when we don't think there's a foreground object in frame,
+				// because foreground objects contacting background objects may get 'sucked into' the background
+				if(backgroundEstablished >= 5 && statsZ.getNumSamples() < OSG_LIVESCENEVIEW_BACKGROUND_NOISE_SAMPLES) // very small amount of foreground
 				{
 					// add it to the background
-					background.accumulateBackgroundFromCleanPlate(imageRGB, imageZ, livescene::Background::MIN_Z);
+					// make sure we're only adding it where it's Z-threshold adjacent to existing background (MIN_Z_ADJACENT)
+					background.accumulateBackgroundFromCleanPlate(imageRGB, imageZ, livescene::Background::MIN_Z_ADJACENT, &foreZ);
+					noForeground = true; // <<<>>> somehow we could completely avoid drawing the foreground in this case, but we don't yet
 				} // if
 			} // if
 
@@ -259,6 +322,19 @@ int main()
 
 				//osgDB::writeNodeFile(*viewer.getSceneData(), "largescene.osg");
 			} // oneshot
+
+			// update the HUD
+			std::ostringstream textHUD;
+
+			if(noForeground) fgInfoStr = "foreground not detected"; else fgInfoStr = "* FOREGROUND DETECTED *";
+			textHUD << "Foreground Samples: " << statsZ.getNumSamples() << std::endl <<
+				fgInfoStr << std::endl <<
+				"zMin: " << statsZ.getMin() << std::endl <<
+				"zMax: " << statsZ.getMax() << std::endl <<
+				"zMean: " << statsZ.getMean() << std::endl <<
+				"zMed: " << statsZ.getMedian() << std::endl <<
+				"zStdDev: " << statsZ.getStdDev() << std::endl;
+			textEntity->setText(textHUD.str());
 
 			viewer.frame();
 		} // if

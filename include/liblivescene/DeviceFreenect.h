@@ -74,7 +74,7 @@ class DeviceFreenectFactory : public DeviceFactory
 
 
 	private:
-		void increaseAllocatedUnits(void) {_allocatedUnits++;}
+		void increaseAllocatedUnits(void) {++_allocatedUnits;}
 		void decreaseAllocatedUnits(void) {if(_allocatedUnits > 0) _allocatedUnits--;}
 		int _numUnits;
 		int _allocatedUnits;

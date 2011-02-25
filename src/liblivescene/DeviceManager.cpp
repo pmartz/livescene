@@ -20,7 +20,7 @@ DeviceManager::DeviceManager()
 DeviceManager::~DeviceManager()
 {
 	// dispose of factories
-	for(FactoryCollection::iterator removal = _availableFactories.begin(); removal != _availableFactories.end(); removal++)
+	for(FactoryCollection::iterator removal = _availableFactories.begin(); removal != _availableFactories.end(); ++removal)
 	{
 		// just delete the object referred to, no need to remove from the container
 		// because the container will be destroyed in a moment.
@@ -43,7 +43,7 @@ public:
 	{
 		std::string factoryType = currentFactory->getType();
 		// manual iteration, not going to try to embed a second functor here so I can use for_each
-		for(StringContainer::const_iterator currentString = _stringCriteria.begin(); currentString != _stringCriteria.end(); currentString++)
+		for(StringContainer::const_iterator currentString = _stringCriteria.begin(); currentString != _stringCriteria.end(); ++currentString)
 		{
 			if(currentString->empty() || currentString->compare(factoryType) == 0)
 			{ // matched, add it

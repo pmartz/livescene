@@ -79,9 +79,9 @@ void UserInteraction::defaultDetection( InteractorContainer& interactors, const 
     unsigned short minVal( undetected );
     osg::Vec2s minLoc;
     int sdx, tdx;
-    for( tdx=0; tdx<height; tdx++ )
+    for( tdx=0; tdx<height; ++tdx )
     {
-        for( sdx=0; sdx<width; sdx++ )
+        for( sdx=0; sdx<width; ++sdx )
         {
             if( *ptr < minVal )
             {
@@ -108,7 +108,7 @@ void UserInteraction::defaultDetection( InteractorContainer& interactors, const 
                     }
                 }
             }
-            ptr++;
+            ++ptr;
         }
     }
 
@@ -136,7 +136,7 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
     //std::cout << "initial " << old.size() << std::endl;
 
     InteractorContainer::iterator itr;
-    for( itr=newInteractors.begin(); itr != newInteractors.end(); itr++ )
+    for( itr=newInteractors.begin(); itr != newInteractors.end(); ++itr )
     {
         Interactor& current = *itr;
         int prevIdx = getIndexByID( current._id, lastInteractors );
@@ -213,7 +213,7 @@ void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, I
 
     //std::cout << "issuing release " << old.size() << std::endl;
     // Anything left on 'old' was not found on newInteractors, so generate RELEASE
-    for( itr=old.begin(); itr != old.end(); itr++ )
+    for( itr=old.begin(); itr != old.end(); ++itr )
     {
         const Interactor& current = *itr;
 
@@ -281,7 +281,7 @@ int UserInteraction::getIndexOfClosest( const osg::Vec2s& loc, const InteractorC
 
     double minDistance( FLT_MAX );
     unsigned int idx;
-    for( idx=0; idx < interactors.size(); idx++ )
+    for( idx=0; idx < interactors.size(); ++idx )
     {
         const Interactor& candidate( interactors[ idx ] );
         float a = candidate._location.x() - loc.x();
@@ -304,7 +304,7 @@ int UserInteraction::getIndexByName( const std::string& name, const InteractorCo
         return( returnValue );
 
     unsigned int idx;
-    for( idx=0; idx < interactors.size(); idx++ )
+    for( idx=0; idx < interactors.size(); ++idx )
     {
         const Interactor& candidate( interactors[ idx ] );
         if( candidate._name == name )
@@ -320,7 +320,7 @@ int UserInteraction::getIndexByID( const unsigned int id, const InteractorContai
         return( returnValue );
 
     unsigned int idx;
-    for( idx=0; idx < interactors.size(); idx++ )
+    for( idx=0; idx < interactors.size(); ++idx )
     {
         const Interactor& candidate( interactors[ idx ] );
         if( candidate._id == id )
@@ -337,8 +337,8 @@ bool UserInteraction::eraseByIndex( const unsigned int index, InteractorContaine
     unsigned int idx( 0 );
     while( ( idx != index ) && ( itr != interactors.end() ) )
     {
-        idx++;
-        itr++;
+        ++idx;
+        ++itr;
     }
     if( itr == interactors.end() )
     {
@@ -348,7 +348,7 @@ bool UserInteraction::eraseByIndex( const unsigned int index, InteractorContaine
 
     //std::cout << "  eraseByIndex erasing index " << index << std::endl;
     interactors.erase( itr );
-    //for( itr = interactors.begin(); itr != interactors.end(); itr++ )
+    //for( itr = interactors.begin(); itr != interactors.end(); ++itr )
     //    std::cout << "    " << itr->_location.x() << "," << itr->_location.y() << std::endl;
     return( true );
 }

@@ -75,7 +75,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &l
 		osg::Vec2Array* texCoords = new osg::Vec2Array;
 		short *shortVertices = lsgeometry.getVertices();
 		float *floatTexCoords = lsgeometry.getTexCoord();
-		for(unsigned int vertexLoop = 0; vertexLoop < lsgeometry.getNumVertices(); vertexLoop++)
+		for(unsigned int vertexLoop = 0; vertexLoop < lsgeometry.getNumVertices(); ++vertexLoop)
 		{
 	        vertices->push_back(osg::Vec3(shortVertices[vertexLoop * 3], shortVertices[vertexLoop * 3 + 1], shortVertices[vertexLoop * 3 + 2]));
 			texCoords->push_back(osg::Vec2(floatTexCoords[vertexLoop * 2], floatTexCoords[vertexLoop * 2 + 1]));
@@ -162,12 +162,12 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &lsg
 		short *shortVertices = lsgeometry.getVertices();
 		float *floatTexCoords = lsgeometry.getTexCoord();
 		unsigned int *intIndices = lsgeometry.getIndices();
-		for(unsigned int vertexLoop(0); vertexLoop < lsgeometry.getNumVertices(); vertexLoop++)
+		for(unsigned int vertexLoop(0); vertexLoop < lsgeometry.getNumVertices(); ++vertexLoop)
 		{
 	        vertices->push_back(osg::Vec3(shortVertices[vertexLoop * 3], shortVertices[vertexLoop * 3 + 1], shortVertices[vertexLoop * 3 + 2]));
 			texCoords->push_back(osg::Vec2(floatTexCoords[vertexLoop * 2], floatTexCoords[vertexLoop * 2 + 1]));
 		} // for
-		for(unsigned int idxLoop(0); idxLoop < lsgeometry.getNumIndices(); idxLoop++)
+		for(unsigned int idxLoop(0); idxLoop < lsgeometry.getNumIndices(); ++idxLoop)
 		{
 			elements->push_back(intIndices[idxLoop]);
 		} // for
@@ -288,9 +288,9 @@ int transform( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image
     // TBD How do we know this is unsigned short.
     unsigned short* dataPtr = ( unsigned short* )( imageZ.getData() );
     int sdx, tdx, vdx( 0 );
-    for( tdx=0; tdx<height; tdx++ )
+    for( tdx=0; tdx<height; ++tdx )
     {
-        for( sdx=0; sdx<width; sdx++ )
+        for( sdx=0; sdx<width; ++sdx )
         {
             unsigned short value = *dataPtr++;
             if( ( value != imageZ.getNull() ) && ( value != invalid ) )

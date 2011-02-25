@@ -71,16 +71,16 @@ osg::Vec2s getMinLocation( unsigned short* buf )
     osg::Vec2s minLoc;
 
     unsigned short sdx, tdx;
-    for( tdx=0; tdx<FREENECT_FRAME_H; tdx++ )
+    for( tdx=0; tdx<FREENECT_FRAME_H; ++tdx )
     {
-        for( sdx=0; sdx<FREENECT_FRAME_W; sdx++ )
+        for( sdx=0; sdx<FREENECT_FRAME_W; ++sdx )
         {
             if( *ptr < minVal )
             {
                 minVal = *ptr;
                 minLoc.set( sdx, tdx );
             }
-            ptr++;
+            ++ptr;
         }
     }
     return( minLoc );
@@ -112,7 +112,7 @@ osg::Vec2 scaleAndSmooth( const osg::Vec2s& loc, float width, float height )
     // Compute total of all locations
     osg::Vec2 total;
     Vec2Vec::const_iterator itr;
-    for( itr=smooth.begin(); itr!=smooth.end(); itr++ )
+    for( itr=smooth.begin(); itr!=smooth.end(); ++itr )
         total += *itr;
 
     // Return average location

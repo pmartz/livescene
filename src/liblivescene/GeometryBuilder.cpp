@@ -72,10 +72,10 @@ bool Geometry::buildPointCloud(const livescene::Image &imageZ, const livescene::
 
 	// loop logic taken from libfreenect glpclview, DrawGLScene()
 	unsigned int loopSub(0), vertSub(0), indexSub(0), texSub(0), normSub(0);
-	for(int line = 0; line < height; line++)
+	for(int line = 0; line < height; ++line)
 	{
 		const float lineTC = (float)line / (float)height;
-		for(int column = 0; column < width; column++)
+		for(int column = 0; column < width; ++column)
 		{
 			const float columnTC = (float)column / (float)width;
 			short originalDepth = depthBuffer[loopSub];
@@ -139,11 +139,11 @@ bool Geometry::buildFaces(const livescene::Image &imageZ, const livescene::Image
 	// if the split runs LL-UR, it will try to do so. This reduces sawtooth edges
 	// along borders between data and no-data.
 	unsigned int loopSub(0), vertSub(0), vertCount(0), indexSub(0), texSub(0), normSub(0), polyCount(0);
-	for(int line = 0; line < height - 1; line++) // NOTE: height - 1
+	for(int line = 0; line < height - 1; ++line) // NOTE: height - 1
 	{
 		const float lineTC = (float)line / (float)height;
 		const float linePlusOneTC = (float)(line + 1) / (float)height;
-		for(int column = 0; column < width - 1; column++) // NOTE: width - 1
+		for(int column = 0; column < width - 1; ++column) // NOTE: width - 1
 		{
 			const unsigned int loopSub = line * width + column;
 			const unsigned int loopSubPlusOneColumn = line * width + column + 1;

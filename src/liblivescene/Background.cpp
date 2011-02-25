@@ -27,11 +27,11 @@ bool Background::loadZBackgroundFromCleanPlate(const livescene::Image &cleanPlat
 } // Background::loadZBackgroundFromCleanPlate
 
 
-bool Background::accumulateBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB, const livescene::Image &cleanPlateZ, AccumulateMode mode)
+bool Background::accumulateBackgroundFromCleanPlate(const livescene::Image &cleanPlateRGB, const livescene::Image &cleanPlateZ, AccumulateMode mode, livescene::Image *foreZ)
 {
 	bool successZ(false), successRGB(false);
 	successRGB = accumulateRGBBackgroundFromCleanPlate(cleanPlateRGB, mode);
-	successZ = accumulateZBackgroundFromCleanPlate(cleanPlateZ, mode);
+	successZ = accumulateZBackgroundFromCleanPlate(cleanPlateZ, mode, foreZ);
 	return(successRGB && successZ);
 } // Background::accumulateBackgroundFromCleanPlate
 
@@ -42,51 +42,93 @@ return(false); // <<<>>> not implemented
 } // Background::accumulateRGBBackgroundFromCleanPlate
 
 
-bool Background::accumulateZBackgroundFromCleanPlate(const livescene::Image &cleanPlateZ, AccumulateMode mode)
+bool Background::accumulateZBackgroundFromCleanPlate(const livescene::Image &cleanPlateZ, AccumulateMode mode, livescene::Image *foreZ)
 {
 	const int maxSample = _bgZ.getSamples();
 	const float accumWeight = 1.0f / (cleanPlateZ.getAccumulation() + 1.0f); // only used in AVERAGE mode
 	unsigned short *bgZData = (unsigned short *)_bgZ.getData();
+	unsigned short *foreZData = NULL;
 	unsigned short *cleanZData = (unsigned short *)cleanPlateZ.getData();
 	unsigned short cleanZnull = (unsigned short)cleanPlateZ.getNull();
-	for(int sample = 0; sample < maxSample; sample++)
+	unsigned short foreZnull = 0;
+
+	if(foreZ)
 	{
-		const int cleanZsample = cleanZData[sample];
-		if(cleanZsample != cleanZnull)
+		foreZData = (unsigned short *)foreZ->getData();
+		foreZnull = (unsigned short)foreZ->getNull();
+	} // if
+
+	int width(cleanPlateZ.getWidth()), height(cleanPlateZ.getHeight());
+
+
+	int sample = 0;
+	for(int line = 0; line < height; ++line)
+	{
+		for(int column = 0; column < width; ++column)
 		{
-			switch(mode)
+			sample = column + line * width; // precacluate array subscript
+			const int cleanZsample = cleanZData[sample];
+			if(cleanZsample != cleanZnull)
 			{
-			case MIN_Z:
+				long delta = 0;
+				const int cleanZepsilon = (int)(cleanZsample * _discriminationEpsilonPercent); // margin of noise/error
+				switch(mode)
 				{
-					if(cleanZsample < bgZData[sample])
+				case MIN_Z:
+				case MIN_Z_ADJACENT:
 					{
-						bgZData[sample] = cleanZsample;
-					} // if
-					break;
-				} // MIN_Z
-			case MAX_Z:
-				{
-					if(cleanZsample > bgZData[sample])
+						// is the sample from the clean plate nearer to the sensor
+						// if mode == _ADJACENT, it must also be close enough in Z to an adjacent sample in the background
+						if(cleanZsample < bgZData[sample] && (mode == MIN_Z || (_bgZ.minimumDeltaToNeighbors(column, line, cleanZsample, delta) && delta <= cleanZepsilon)))
+						{
+							bgZData[sample] = cleanZsample;
+							if(foreZ)
+							{ // knock it out of foreground
+								foreZData[sample] = foreZnull;
+							} // if
+						} // if
+						break;
+					} // MIN_Z
+				case MAX_Z:
+				case MAX_Z_ADJACENT:
 					{
-						bgZData[sample] = cleanZsample;
-					} // if
-					break;
-				} // MAX_Z
-			case AVERAGE_Z:
-				{
-					if(bgZData[sample] == cleanZnull)
-					{ // just overwrite no-data value
-						bgZData[sample] = cleanZsample; 
-					} // if
-					else
-					{ // average together existing data values
-						bgZData[sample] = (unsigned short)(accumWeight * ((float)bgZData[sample] + (float)cleanZsample));
-					} // else
-					break;
-				} // AVERAGE_Z
-			} // mode
-		} // if not null
-	} // for
+						// is the sample from the clean plate further from the sensor
+						// if mode == _ADJACENT, it must also be close enough in Z to an adjacent sample in the background
+						if(cleanZsample > bgZData[sample] && (mode == MAX_Z || (_bgZ.minimumDeltaToNeighbors(column, line, cleanZsample, delta) && delta <= cleanZepsilon)))
+						{
+							bgZData[sample] = cleanZsample;
+							if(foreZ)
+							{ // knock it out of foreground
+								foreZData[sample] = foreZnull;
+							} // if
+						} // if
+						break;
+					} // MAX_Z
+				case AVERAGE_Z:
+				case AVERAGE_Z_ADJACENT:
+					{
+						// if mode == _ADJACENT, is the sample from the clean plate close enough in Z to an adjacent sample in the background?
+						if(mode == AVERAGE_Z || (_bgZ.minimumDeltaToNeighbors(column, line, cleanZsample, delta) && delta <= cleanZepsilon))
+						{
+							if(bgZData[sample] == cleanZnull) // is it a clean replacement -- no existing samples at this location
+							{ // just overwrite no-data value
+								bgZData[sample] = cleanZsample; 
+							} // if
+							else
+							{ // average together existing data values
+								bgZData[sample] = (unsigned short)(accumWeight * ((float)bgZData[sample] + (float)cleanZsample));
+							} // else
+							if(foreZ)
+							{ // knock it out of foreground
+								foreZData[sample] = foreZnull;
+							} // if
+						} // if part of background
+						break;
+					} // AVERAGE_Z
+				} // mode
+			} // if not null
+		} // for column
+	} // for lines
 
 return(true);
 } // Background::accumulateZBackgroundFromCleanPlate
@@ -123,7 +165,7 @@ bool Background::extractZBackground(const livescene::Image &liveZ, livescene::Im
 	unsigned short foreZnull = (unsigned short)foregroundZ.getNull();
 	
 	const int maxSample = _bgZ.getSamples();
-	for(int sample = 0; sample < maxSample; sample++)
+	for(int sample = 0; sample < maxSample; ++sample)
 	{
 		const int liveZsample = liveZData[sample];
 		const int liveZepsilon = (int)(liveZsample * _discriminationEpsilonPercent); // margin of noise/error
