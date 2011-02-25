@@ -7,6 +7,7 @@
 #include <liblivescene/osgGeometry.h>
 #include <liblivescene/Background.h>
 #include <iostream>
+#include <iomanip>
 
 #ifdef OSGWORKS_FOUND
 #  include <osgwTools/Shapes.h>
@@ -196,6 +197,8 @@ int main()
 		livescene::Image imageRGB(NominalFrameW, NominalFrameH, 3, livescene::VIDEO_RGB);
 		livescene::Image imageZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT);
 		livescene::Image foreZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT); // only the foreground
+		unsigned int numFiltered(0);
+
 		if(ImageCapabilitiesRGB)
 		{
 			goodRGB = ImageCapabilitiesRGB->getImageSync(imageRGB);
@@ -236,6 +239,11 @@ int main()
 					// make sure we're only adding it where it's Z-threshold adjacent to existing background (MIN_Z_ADJACENT)
 					background.accumulateBackgroundFromCleanPlate(imageRGB, imageZ, livescene::Background::MIN_Z_ADJACENT, &foreZ);
 					noForeground = true; // <<<>>> somehow we could completely avoid drawing the foreground in this case, but we don't yet
+				} // if
+				if(!noForeground)
+				{ // these operations only make sense if we have a forefround
+					// filter noise
+					numFiltered = foreZ.filterNoise(2);
 				} // if
 			} // if
 
@@ -327,13 +335,20 @@ int main()
 			std::ostringstream textHUD;
 
 			if(noForeground) fgInfoStr = "foreground not detected"; else fgInfoStr = "* FOREGROUND DETECTED *";
-			textHUD << "Foreground Samples: " << statsZ.getNumSamples() << std::endl <<
+			textHUD.setf(std::ios::fixed,std::ios::floatfield);
+			textHUD << std::ios::left << std::setfill('0') << std::setw(4) << std::setprecision(0) <<
+				"Foreground Samples: " << statsZ.getNumSamples() << std::endl <<
 				fgInfoStr << std::endl <<
+				"Noise Filtered: " << numFiltered << std::endl <<
 				"zMin: " << statsZ.getMin() << std::endl <<
-				"zMax: " << statsZ.getMax() << std::endl <<
-				"zMean: " << statsZ.getMean() << std::endl <<
 				"zMed: " << statsZ.getMedian() << std::endl <<
-				"zStdDev: " << statsZ.getStdDev() << std::endl;
+				"zMax: " << statsZ.getMax() << std::endl <<
+				"zMN: " << statsZ.getMean() << std::endl <<
+				"zSD: " << statsZ.getStdDev() << std::endl <<
+				"xMN: " << statsX.getMean() << std::endl <<
+				"xSD: " << statsX.getStdDev() << std::endl <<
+				"yMN: " << statsY.getMean() << std::endl <<
+				"ySD: " << statsY.getStdDev();
 			textEntity->setText(textHUD.str());
 
 			viewer.frame();

@@ -205,8 +205,6 @@ unsigned int Image::filterNoise(const unsigned int &numNeighbors)
 		} // for
 	} // for lines
 
-	// <<<>>> should we deliberately null out the outermost lines/columns, since we can't filter them?
-
 	return(numFiltered);
 } // Image::filterNoise
 
