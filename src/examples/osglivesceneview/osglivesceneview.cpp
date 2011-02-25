@@ -171,12 +171,10 @@ int main()
 	livescene::Geometry geometryBuilderFore;
 	livescene::Geometry geometryBuilderBack;
 
-    osg::Matrix m = livescene::makeDeviceToWorldMatrix( NominalFrameW, NominalFrameH, 1024 /*, device */ ) *
-        osg::Matrix::rotate( 90., 1., 0., 0. );
-    osg::ref_ptr<osg::MatrixTransform> kinectTransform = new osg::MatrixTransform( m );
-    kinectTransform->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
-	kinectTransform->getOrCreateStateSet()->setAttribute( new osg::Point( 3.0f ), osg::StateAttribute::ON );
-	topGroup->addChild(kinectTransform.get());
+    osg::ref_ptr<osg::Group> kinectGroup = new osg::Group;
+    kinectGroup->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
+	kinectGroup->getOrCreateStateSet()->setAttribute( new osg::Point( 3.0f ), osg::StateAttribute::ON );
+	topGroup->addChild(kinectGroup.get());
 
 	// add HUD
 	buildHUD();
@@ -294,7 +292,7 @@ int main()
 				// link the new data into the scene graph and setup texturing if this is the first frame
 				if(firstFrame)
 				{
-					kinectTransform->addChild(foreScene);
+					kinectGroup->addChild(foreScene);
 					if(textureForeground)
 					{
 						// setup texturing
@@ -304,7 +302,7 @@ int main()
 
 					if(ShowBackground)
 					{
-						kinectTransform->addChild(backScene);
+						kinectGroup->addChild(backScene);
 						if(textureBackground)
 						{
 							// setup texturing
@@ -328,7 +326,6 @@ int main()
 						GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(imageRGB.getData()), osg::Image::NO_DELETE );
 				} // if
 
-				//osgDB::writeNodeFile(*viewer.getSceneData(), "largescene.osg");
 			} // oneshot
 
 			// update the HUD

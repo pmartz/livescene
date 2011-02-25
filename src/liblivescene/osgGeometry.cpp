@@ -5,6 +5,42 @@
 
 namespace livescene {
 
+	osg::Vec3 transformPoint( const osg::Matrix& m, const int &coordX, const int &coordY, const unsigned short &valueZ )
+{
+    osg::Vec4 deviceCoord( coordX, coordY, valueZ, 1.0 );
+    osg::Vec4 clipCoord = deviceCoord * m;
+    osg::Vec3 eyeCoord( clipCoord[0]/clipCoord[3],
+        clipCoord[1]/clipCoord[3], clipCoord[2]/clipCoord[3] );
+    return(eyeCoord);
+}
+
+int transform( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image imageZ, const unsigned short invalid )
+{
+    const int width = imageZ.getWidth();
+    const int height = imageZ.getHeight();
+    const int numVectors = width * height;
+    vec->resize( numVectors );
+
+    // TBD How do we know this is unsigned short.
+    unsigned short* dataPtr = ( unsigned short* )( imageZ.getData() );
+    int sdx, tdx, vdx( 0 );
+    for( tdx=0; tdx<height; ++tdx )
+    {
+        for( sdx=0; sdx<width; ++sdx )
+        {
+            unsigned short value = *dataPtr++;
+            if( ( value != imageZ.getNull() ) && ( value != invalid ) )
+            {
+				(*vec)[ vdx++ ] = transformPoint(m, sdx, tdx, value);
+            }
+        }
+    }
+    vec->dirty();
+    return( vdx );
+}
+
+
+
 // <<<>>> this function does NOT currently work!
 
 LIVESCENE_EXPORT osg::Geode* buildOSGPointCloud(const livescene::Geometry &lsgeometry, osg::Vec4 baseColor)
@@ -65,6 +101,9 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &l
     // create POINTS
 	if(lsgeometry.getEntityType() == livescene::Geometry::GEOMETRY_POINTS)
     {
+	    const int nominalFrameW( 640 ), nominalFrameH( 480 ), nominalFrameD( 1024 );
+	    osg::Matrix d2w = livescene::makeDeviceToWorldMatrix( nominalFrameW, nominalFrameH, nominalFrameD /*, TBD Device device */ );
+
 
         // create a Vec3Array and add to it all my coordinates.
         // Like all the *Array variants (see include/osg/Array) , Vec3Array is derived from both osg::Array 
@@ -77,7 +116,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &l
 		float *floatTexCoords = lsgeometry.getTexCoord();
 		for(unsigned int vertexLoop = 0; vertexLoop < lsgeometry.getNumVertices(); ++vertexLoop)
 		{
-	        vertices->push_back(osg::Vec3(shortVertices[vertexLoop * 3], shortVertices[vertexLoop * 3 + 1], shortVertices[vertexLoop * 3 + 2]));
+	        vertices->push_back(transformPoint(d2w, shortVertices[vertexLoop * 3], shortVertices[vertexLoop * 3 + 1], shortVertices[vertexLoop * 3 + 2]));
 			texCoords->push_back(osg::Vec2(floatTexCoords[vertexLoop * 2], floatTexCoords[vertexLoop * 2 + 1]));
 		} // for
         
@@ -277,41 +316,6 @@ osg::Matrix makeDeviceToWorldMatrix( const int width, const int height, const in
 
     return( invWindow * yNegativeScale * invNDC * invProj );
 }
-
-osg::Vec3 transformPoint( const osg::Matrix& m, const int &coordX, const int &coordY, const unsigned short &valueZ )
-{
-    osg::Vec4 deviceCoord( coordX, coordY, valueZ, 1.0 );
-    osg::Vec4 clipCoord = deviceCoord * m;
-    osg::Vec3 eyeCoord( clipCoord[0]/clipCoord[3],
-        clipCoord[1]/clipCoord[3], clipCoord[2]/clipCoord[3] );
-    return(eyeCoord);
-}
-
-int transform( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image imageZ, const unsigned short invalid )
-{
-    const int width = imageZ.getWidth();
-    const int height = imageZ.getHeight();
-    const int numVectors = width * height;
-    vec->resize( numVectors );
-
-    // TBD How do we know this is unsigned short.
-    unsigned short* dataPtr = ( unsigned short* )( imageZ.getData() );
-    int sdx, tdx, vdx( 0 );
-    for( tdx=0; tdx<height; ++tdx )
-    {
-        for( sdx=0; sdx<width; ++sdx )
-        {
-            unsigned short value = *dataPtr++;
-            if( ( value != imageZ.getNull() ) && ( value != invalid ) )
-            {
-				(*vec)[ vdx++ ] = transformPoint(m, sdx, tdx, value);
-            }
-        }
-    }
-    vec->dirty();
-    return( vdx );
-}
-
 
 
 LIVESCENE_EXPORT osg::MatrixTransform* buildOSGTextureMatrixTransform(void)
