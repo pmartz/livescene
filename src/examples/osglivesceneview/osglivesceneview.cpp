@@ -28,7 +28,7 @@
 const int OSG_LIVESCENEVIEW_BACKGROUND_NOISE_SAMPLES(1500); // fewer than this many foreground samples in a frame are presumed to be background noise
 const int OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES(5); // Assume the first n frames are empty background, for calibration
 
-static const int NominalFrameW = 640, NominalFrameH = 480;
+static const int NominalFrameW = 640, NominalFrameH = 480; // <<<>>> these should be made dynamic
 
 osg::ref_ptr<osg::Group> topGroup;
 // for HUD and any other screen-space elements
@@ -38,8 +38,20 @@ osg::ref_ptr<osg::Projection> screenProjection;
 osg::ref_ptr<osg::MatrixTransform> screenMatrixTransform;
 osg::ref_ptr<osgText::Text> textEntity;
 
+osg::ref_ptr<osg::Geode>foreGroundMarker;
+osg::ref_ptr<osg::PositionAttitudeTransform>fgMarkerPAT;
+
 // some strings that get formatted together to make the HUD metadata
 std::string fgInfoStr, minDepth, maxDepth;
+
+void buildMarker(void)
+{
+	foreGroundMarker = new osg::Geode;
+	fgMarkerPAT = new osg::PositionAttitudeTransform;
+	//foreGroundMarker->addDrawable(osgwTools::makeWireAltAzSphere( 4.0, 16, 32 ));
+	foreGroundMarker->addDrawable(osgwTools::makeWireBox( osg::Vec3(4.0, 4.0, 4.0)));
+	fgMarkerPAT->addChild(foreGroundMarker);
+} // buildMarker
 
 void buildHUD(void)
 {
@@ -83,9 +95,11 @@ void buildHUD(void)
 
 int main()
 {
-	bool PolygonsMode(false), IsolateBackground(true), ShowBackground(true), textureForeground(false), textureBackground(true);
+	bool PolygonsMode(true), IsolateBackground(true), ShowBackground(true), textureForeground(false), textureBackground(true);
 	osg::Vec4 foreColor(0.0, 0.7, 1.0, 1.0), backColor(1.0, 1.0, 1.0, 1.0);
 	livescene::ImageStatistics statsX, statsY, statsZ;
+    const int nominalFrameD( 1024 ); // <<<>>> these should be made dynamic
+    osg::Matrix d2w = livescene::makeDeviceToWorldMatrix( NominalFrameW, NominalFrameH, nominalFrameD /*, TBD Device device */ );
 
 	std::cout << livescene::getVersionString() << std::endl;
 
@@ -179,6 +193,10 @@ int main()
 	// add HUD
 	buildHUD();
 	topGroup->addChild(screenElementsGroup.get());
+
+	// add marker
+	buildMarker();
+	topGroup->addChild(fgMarkerPAT.get());
 
 	// set scene data
 	viewer.setSceneData( topGroup.get() );
@@ -328,6 +346,34 @@ int main()
 
 			} // oneshot
 
+			float worldXRad(0.0f), worldYRad(0.0f), worldZRad(0.0f);
+			if(noForeground)
+			{
+				fgMarkerPAT->setNodeMask(0);
+			} // if
+			else
+			{
+				fgMarkerPAT->setNodeMask(~0);
+				// update the marker
+				osg::Vec3 worldForegroundMean(livescene::transformPoint(d2w, statsX.getMean(), statsY.getMean(), statsZ.getMean()));
+				osg::Vec3 worldForegroundXHalfStdDev, worldForegroundYHalfStdDev, worldForegroundZStdDev;
+				worldForegroundXHalfStdDev = livescene::transformPoint(d2w, statsX.getMean() + (statsX.getStdDev() * 0.5), statsY.getMean(), statsZ.getMean());
+				worldForegroundYHalfStdDev = livescene::transformPoint(d2w, statsX.getMean(), statsY.getMean() + (statsY.getStdDev() * 0.5), statsZ.getMean());
+				// For Z, multiply by 1/2 omitted because we only see 1/2 of Z range already
+				worldForegroundZStdDev     = livescene::transformPoint(d2w, statsX.getMean(), statsY.getMean(), statsZ.getMean() + statsZ.getStdDev());
+
+				// because we only see the front half of objects, their mass is baised forward 1/2 in Z
+				// To compensate, we average their position half/half with the worldForegroundZStdDev, which
+				// re-biases it backwards to where it ought to be
+				fgMarkerPAT->setPosition((worldForegroundMean + worldForegroundZStdDev) * 0.5);
+				//fgMarkerPAT->setPosition(worldForegroundMean);
+
+				worldXRad = (worldForegroundXHalfStdDev - worldForegroundMean).x();
+				worldYRad = (worldForegroundYHalfStdDev - worldForegroundMean).y();
+				worldZRad = (worldForegroundZStdDev - worldForegroundMean).z();
+				fgMarkerPAT->setScale(osg::Vec3(worldXRad, worldYRad, worldZRad));
+			} // else
+			
 			// update the HUD
 			std::ostringstream textHUD;
 
