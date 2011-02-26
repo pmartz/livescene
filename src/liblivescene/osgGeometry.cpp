@@ -101,7 +101,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &l
     // create POINTS
 	if(lsgeometry.getEntityType() == livescene::Geometry::GEOMETRY_POINTS)
     {
-	    const int nominalFrameW( 640 ), nominalFrameH( 480 ), nominalFrameD( 1024 );
+	    const int nominalFrameW( 640 ), nominalFrameH( 480 ), nominalFrameD( 1024 ); // <<<>>> these should be made dynamic
 	    osg::Matrix d2w = livescene::makeDeviceToWorldMatrix( nominalFrameW, nominalFrameH, nominalFrameD /*, TBD Device device */ );
 
 
@@ -187,6 +187,8 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &lsg
     // create TRIANGLES
 	if(lsgeometry.getEntityType() == livescene::Geometry::GEOMETRY_FACES)
     {
+	    const int nominalFrameW( 640 ), nominalFrameH( 480 ), nominalFrameD( 1024 ); // <<<>>> these should be made dynamic
+	    osg::Matrix d2w = livescene::makeDeviceToWorldMatrix( nominalFrameW, nominalFrameH, nominalFrameD /*, TBD Device device */ );
 
         // create a Vec3Array and add to it all the coordinates.
 		osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array;
@@ -203,7 +205,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &lsg
 		unsigned int *intIndices = lsgeometry.getIndices();
 		for(unsigned int vertexLoop(0); vertexLoop < lsgeometry.getNumVertices(); ++vertexLoop)
 		{
-	        vertices->push_back(osg::Vec3(shortVertices[vertexLoop * 3], shortVertices[vertexLoop * 3 + 1], shortVertices[vertexLoop * 3 + 2]));
+			vertices->push_back(transformPoint(d2w, shortVertices[vertexLoop * 3], shortVertices[vertexLoop * 3 + 1], shortVertices[vertexLoop * 3 + 2]));
 			texCoords->push_back(osg::Vec2(floatTexCoords[vertexLoop * 2], floatTexCoords[vertexLoop * 2 + 1]));
 		} // for
 		for(unsigned int idxLoop(0); idxLoop < lsgeometry.getNumIndices(); ++idxLoop)
