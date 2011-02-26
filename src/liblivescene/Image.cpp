@@ -289,7 +289,7 @@ bool Image::minimumDeltaToNeighbors(const unsigned int &X, const unsigned int &Y
 
 
 
-bool Image::calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ)
+bool Image::calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ, ApproveCallback *approveCallback)
 {
 	if(!(_format == DEPTH_10BIT || _format == DEPTH_11BIT))
 	{
@@ -309,7 +309,7 @@ bool Image::calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::Imag
 		for(int column = 0; column < width; ++column)
 		{
 			short originalDepth = depthBuffer[loopSub];
-			if(isCellValueValid(originalDepth))
+			if(isCellValueValid(originalDepth) && (!approveCallback || (*approveCallback)(column, line, originalDepth)))
 			{
 				if(destStatsX) destStatsX->addSample(column);
 				if(destStatsY) destStatsY->addSample(line);

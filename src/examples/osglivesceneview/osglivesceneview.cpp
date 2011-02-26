@@ -44,12 +44,24 @@ osg::ref_ptr<osg::PositionAttitudeTransform>fgMarkerPAT;
 // some strings that get formatted together to make the HUD metadata
 std::string fgInfoStr, minDepth, maxDepth;
 
+class BoxApproveCallback : public livescene::ApproveCallback
+{
+public:
+	BoxApproveCallback(osg::BoundingBox bbox) : _bbox(bbox) {}
+	bool operator ()(const unsigned int &xCoord, const unsigned int &yCoord, const unsigned short &zCoord)
+	{
+		return(_bbox.contains(osg::Vec3f(xCoord, yCoord, zCoord)));
+	} // operator ()
+private:
+	osg::BoundingBox _bbox;
+}; // BoxApproveCallback 
+
 void buildMarker(void)
 {
 	foreGroundMarker = new osg::Geode;
 	fgMarkerPAT = new osg::PositionAttitudeTransform;
 	//foreGroundMarker->addDrawable(osgwTools::makeWireAltAzSphere( 4.0, 16, 32 ));
-	foreGroundMarker->addDrawable(osgwTools::makeWireBox( osg::Vec3(4.0, 4.0, 4.0)));
+	foreGroundMarker->addDrawable(osgwTools::makeWireBox( osg::Vec3(1.0, 1.0, 1.0)));
 	fgMarkerPAT->addChild(foreGroundMarker);
 } // buildMarker
 
@@ -98,6 +110,7 @@ int main()
 	bool PolygonsMode(true), IsolateBackground(true), ShowBackground(true), textureForeground(false), textureBackground(true);
 	osg::Vec4 foreColor(0.0, 0.7, 1.0, 1.0), backColor(1.0, 1.0, 1.0, 1.0);
 	livescene::ImageStatistics statsX, statsY, statsZ;
+	livescene::ImageStatistics statsBodyX, statsBodyY, statsBodyZ;
     const int nominalFrameD( 1024 ); // <<<>>> these should be made dynamic
     osg::Matrix d2w = livescene::makeDeviceToWorldMatrix( NominalFrameW, NominalFrameH, nominalFrameD /*, TBD Device device */ );
 
@@ -346,9 +359,11 @@ int main()
 
 			} // oneshot
 
-			float worldXRad(0.0f), worldYRad(0.0f), worldZRad(0.0f);
+			float worldBoxXScale(0.0f), worldBoxYScale(0.0f), worldBoxZScale(0.0f);
 			if(noForeground)
 			{
+				statsX.clear(); statsY.clear(); statsZ.clear();
+				statsBodyX.clear(); statsBodyY.clear(); statsBodyZ.clear();
 				fgMarkerPAT->setNodeMask(0);
 			} // if
 			else
@@ -356,22 +371,39 @@ int main()
 				fgMarkerPAT->setNodeMask(~0);
 				// update the marker
 				osg::Vec3 worldForegroundMean(livescene::transformPoint(d2w, statsX.getMean(), statsY.getMean(), statsZ.getMean()));
-				osg::Vec3 worldForegroundXHalfStdDev, worldForegroundYHalfStdDev, worldForegroundZStdDev;
-				worldForegroundXHalfStdDev = livescene::transformPoint(d2w, statsX.getMean() + (statsX.getStdDev() * 0.5), statsY.getMean(), statsZ.getMean());
-				worldForegroundYHalfStdDev = livescene::transformPoint(d2w, statsX.getMean(), statsY.getMean() + (statsY.getStdDev() * 0.5), statsZ.getMean());
-				// For Z, multiply by 1/2 omitted because we only see 1/2 of Z range already
-				worldForegroundZStdDev     = livescene::transformPoint(d2w, statsX.getMean(), statsY.getMean(), statsZ.getMean() + statsZ.getStdDev());
+				osg::Vec3 worldForegroundXStdDev, worldForegroundYStdDev, worldForegroundZStdDev;
+				worldForegroundXStdDev = livescene::transformPoint(d2w, statsX.getMean() + statsX.getStdDev(), statsY.getMean(), statsZ.getMean());
+				worldForegroundYStdDev = livescene::transformPoint(d2w, statsX.getMean(), statsY.getMean() + statsY.getStdDev(), statsZ.getMean());
+				worldForegroundZStdDev = livescene::transformPoint(d2w, statsX.getMean(), statsY.getMean(), statsZ.getMean() + statsZ.getStdDev());
+
+				// recalculate stats of body, using bounds of nth standard deviation to exclude extraneous noise
+				const float nthStdDev(2.8);
+				BoxApproveCallback stdDevBoxApprove(osg::BoundingBox(
+					statsX.getMean() - statsX.getStdDev() * nthStdDev, // xmin
+					statsY.getMean() - statsY.getStdDev() * nthStdDev, // ymin
+					statsZ.getMean() - statsZ.getStdDev() * nthStdDev, // zmin
+					statsX.getMean() + statsX.getStdDev() * nthStdDev, // xmax
+					statsY.getMean() + statsY.getStdDev() * nthStdDev, // ymax
+					statsZ.getMean() + statsZ.getStdDev() * nthStdDev // zmax
+					));
+				foreZ.calcStatsXYZ(&statsBodyX, &statsBodyY, &statsBodyZ, &stdDevBoxApprove);
+
+				osg::Vec3 worldBodyMean(livescene::transformPoint(d2w, statsBodyX.getMean(), statsBodyY.getMean(), statsBodyZ.getMean()));
+				osg::Vec3 worldBodyXStdDev, worldBodyYStdDev, worldBodyZStdDev;
+				worldBodyXStdDev = livescene::transformPoint(d2w, statsBodyX.getMean() + statsBodyX.getStdDev(), statsBodyY.getMean(), statsBodyZ.getMean());
+				worldBodyYStdDev = livescene::transformPoint(d2w, statsBodyX.getMean(), statsBodyY.getMean() + statsBodyY.getStdDev(), statsBodyZ.getMean());
+				worldBodyZStdDev = livescene::transformPoint(d2w, statsBodyX.getMean(), statsBodyY.getMean(), statsBodyZ.getMean() + statsBodyZ.getStdDev());
 
 				// because we only see the front half of objects, their mass is baised forward 1/2 in Z
-				// To compensate, we average their position half/half with the worldForegroundZStdDev, which
+				// To compensate, we can average their position half/half with the worldBodyZStdDev, which
 				// re-biases it backwards to where it ought to be
-				fgMarkerPAT->setPosition((worldForegroundMean + worldForegroundZStdDev) * 0.5);
-				//fgMarkerPAT->setPosition(worldForegroundMean);
+				//fgMarkerPAT->setPosition((worldBodyMean + worldBodyZStdDev) * 0.5);
+				fgMarkerPAT->setPosition(worldBodyMean);
 
-				worldXRad = (worldForegroundXHalfStdDev - worldForegroundMean).x();
-				worldYRad = (worldForegroundYHalfStdDev - worldForegroundMean).y();
-				worldZRad = (worldForegroundZStdDev - worldForegroundMean).z();
-				fgMarkerPAT->setScale(osg::Vec3(worldXRad, worldYRad, worldZRad));
+				worldBoxXScale = 2 * (worldBodyXStdDev - worldBodyMean).x(); // multiply by two, since stddev is sort of a radius-like, on one side of mean
+				worldBoxYScale = 2 * (worldBodyYStdDev - worldBodyMean).y(); // multiply by two, since stddev is sort of a radius-like, on one side of mean
+				worldBoxZScale = 2 * (worldBodyZStdDev - worldBodyMean).z(); // multiply by two, since stddev is sort of a radius-like, on one side of mean
+				fgMarkerPAT->setScale(osg::Vec3(worldBoxXScale, worldBoxYScale, worldBoxZScale));
 			} // else
 			
 			// update the HUD
@@ -379,10 +411,11 @@ int main()
 
 			if(noForeground) fgInfoStr = "foreground not detected"; else fgInfoStr = "* FOREGROUND DETECTED *";
 			textHUD.setf(std::ios::fixed,std::ios::floatfield);
-			textHUD << std::ios::left << std::setfill('0') << std::setw(4) << std::setprecision(0) <<
+			textHUD << std::setprecision(0) <<
 				"Foreground Samples: " << statsZ.getNumSamples() << std::endl <<
 				fgInfoStr << std::endl <<
 				"Noise Filtered: " << numFiltered << std::endl <<
+				"Body Samples: " << statsBodyZ.getNumSamples() << std::endl <<
 				"zMin: " << statsZ.getMin() << std::endl <<
 				"zMed: " << statsZ.getMedian() << std::endl <<
 				"zMax: " << statsZ.getMax() << std::endl <<

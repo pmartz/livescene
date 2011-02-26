@@ -51,6 +51,20 @@ typedef enum {
 } VideoFormat;
 
 
+
+/** \brief Approve/reject callback functor base class.
+
+*/
+
+
+class LIVESCENE_EXPORT ApproveCallback
+{
+	public:
+		virtual ~ApproveCallback() {}
+		virtual bool operator ()(const unsigned int &xCoord, const unsigned int &yCoord, const unsigned short &zCoord) = 0; // must be overridden
+}; // ApproveCallback
+
+
 /** \brief Image core object.
 
 */
@@ -113,7 +127,8 @@ class LIVESCENE_EXPORT Image
 		bool minimumDeltaToNeighbors(const unsigned int &X, const unsigned int &Y, short cellValue, long &result) const;
 
 		// calculate useful statistics, only operates on Z data, not RGB
-		bool calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ);
+		// approveCallback allows you to provide a callback functor that can custom approve/reject samples
+		bool calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ, ApproveCallback *approveCallback = 0);
 
 		// this will ensure the image is allocated to the proper size and ready to write to
 		bool preAllocate(void);
