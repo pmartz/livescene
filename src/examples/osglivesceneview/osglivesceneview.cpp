@@ -386,6 +386,7 @@ int main()
 					statsY.getMean() + statsY.getStdDev() * nthStdDev, // ymax
 					statsZ.getMean() + statsZ.getStdDev() * nthStdDev // zmax
 					));
+				// <<<>>> this could be made faster by passing the XY bounding box as a limiter
 				foreZ.calcStatsXYZ(&statsBodyX, &statsBodyY, &statsBodyZ, &stdDevBoxApprove);
 
 				osg::Vec3 worldBodyMean(livescene::transformPoint(d2w, statsBodyX.getMean(), statsBodyY.getMean(), statsBodyZ.getMean()));
