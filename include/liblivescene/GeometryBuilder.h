@@ -31,7 +31,7 @@ public:
 	} GeometryEntityType;
 
 	Geometry() : _vertices(0), _indices(0), _indicesTempBuffer(0), _normals(0), _texcoord(0), _entityType(GEOMETRY_UNKNOWN),
-		_numVertices(0), _numIndices(0), _numNormals(0), _numTexCoords(0), _width(0), _height(0), _meshEpsilonPercent(.005f) {}
+		_numVertices(0), _numIndices(0), _numNormals(0), _numTexCoords(0), _width(0), _height(0), _meshEpsilonPercent(.015f) {}
 	~Geometry();
 
 	short *getVertices(void) const {return(_vertices);}
