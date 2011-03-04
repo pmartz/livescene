@@ -13,13 +13,13 @@ namespace livescene {
 /** \defgroup Image Image Operations */
 /*@{*/
 
-class ImageStatistics
+class LIVESCENE_EXPORT ImageStatistics
 {
 public:
 	ImageStatistics() {clear();}
 
 	void addSample(double sample);
-	double getMedian(void) const {return((_min + _max) * 0.5);}
+	double getMidVal(void) const {return((_min + _max) * 0.5);}
 	double getMean(void) const {return(_mean);}
 	double getMin(void) const {return(_min);}
 	double getMax(void) const {return(_max);}
@@ -44,10 +44,11 @@ typedef enum {
 	VIDEO_IR_10BIT_PACKED = 4, /**< 10-bit packed IR mode */
 	VIDEO_YUV_RGB         = 5, /**< YUV RGB mode */
 	VIDEO_YUV_RAW         = 6, /**< YUV Raw mode */
-	DEPTH_11BIT           = 0, /**< 11 bit depth information in one uint16_t/pixel */
-	DEPTH_10BIT           = 1, /**< 10 bit depth information in one uint16_t/pixel */
-	DEPTH_11BIT_PACKED    = 2, /**< 11 bit packed depth information */
-	DEPTH_10BIT_PACKED    = 3, /**< 10 bit packed depth information */
+	DEPTH_11BIT           = 7, /**< 11 bit depth information in one uint16_t/pixel */
+	DEPTH_10BIT           = 8, /**< 10 bit depth information in one uint16_t/pixel */
+	DEPTH_11BIT_PACKED    = 9, /**< 11 bit packed depth information */
+	DEPTH_10BIT_PACKED    = 10, /**< 10 bit packed depth information */
+	DEPTH_FLOAT_32_BIT    = 11, /**< single precision floats, only used for testing */
 } VideoFormat;
 
 
@@ -138,7 +139,8 @@ class LIVESCENE_EXPORT Image
 		void allocData(void);
 
 		unsigned int _width, _height, _depth;
-		int _nullValue, _accumulation;
+		int _nullValue;
+		unsigned short _accumulation;
 		VideoFormat _format;
         unsigned long _timestamp;
 		void *_data; // this is not resource tracked or freed, it's just a dumb pointer for transport

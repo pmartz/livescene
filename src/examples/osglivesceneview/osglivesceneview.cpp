@@ -26,9 +26,10 @@
 #include <osgDB/WriteFile>
 
 const int OSG_LIVESCENEVIEW_BACKGROUND_NOISE_SAMPLES(1500); // fewer than this many foreground samples in a frame are presumed to be background noise
-const int OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES(5); // Assume the first n frames are empty background, for calibration
+const int OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES(10); // Assume the first n frames are empty background, for calibration
 
 static const int NominalFrameW = 640, NominalFrameH = 480; // <<<>>> these should be made dynamic
+unsigned long int frameCount(0);
 
 osg::ref_ptr<osg::Group> topGroup;
 // for HUD and any other screen-space elements
@@ -223,9 +224,9 @@ int main()
 	for(bool keepGoing(true); keepGoing && !viewer.done(); )
     {
 		bool goodRGB(false), goodZ(false), noForeground(false);
-		livescene::Image imageRGB(NominalFrameW, NominalFrameH, 3, livescene::VIDEO_RGB);
-		livescene::Image imageZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT);
-		livescene::Image foreZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT); // only the foreground
+	livescene::Image imageRGB(NominalFrameW, NominalFrameH, 3, livescene::VIDEO_RGB);
+	livescene::Image imageZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT);
+	livescene::Image foreZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT); // only the foreground
 		unsigned int numFiltered(0);
 
 		if(ImageCapabilitiesRGB)
@@ -250,11 +251,13 @@ int main()
 			{ // store a background clean plate
 				background.accumulateBackgroundFromCleanPlate(imageRGB, imageZ, livescene::Background::AVERAGE_Z);
 				++backgroundEstablished;
+				noForeground = true; // skip FG processing while establishing background
 			} // if
 
 			if(IsolateBackground)
 			{
 				foreZ.preAllocate(); // need room to write processed data to (only done at start if needed, not on every frame)
+				foreZ.setNull(imageZ.getNull()); // transfer over NULL value
 				background.extractZBackground(imageZ, foreZ); // wipe out everything that is already in the background plate
 
 				// calculate some stats
@@ -262,11 +265,11 @@ int main()
 				
 				// we can only dynamically accumulate background when we don't think there's a foreground object in frame,
 				// because foreground objects contacting background objects may get 'sucked into' the background
-				if(backgroundEstablished >= 5 && statsZ.getNumSamples() < OSG_LIVESCENEVIEW_BACKGROUND_NOISE_SAMPLES) // very small amount of foreground
+				if(backgroundEstablished >= OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES && statsZ.getNumSamples() < OSG_LIVESCENEVIEW_BACKGROUND_NOISE_SAMPLES) // very small amount of foreground
 				{
 					// add it to the background
 					// make sure we're only adding it where it's Z-threshold adjacent to existing background (MIN_Z_ADJACENT)
-					background.accumulateBackgroundFromCleanPlate(imageRGB, imageZ, livescene::Background::MIN_Z_ADJACENT, &foreZ);
+					background.accumulateBackgroundFromCleanPlate(imageRGB, imageZ, livescene::Background::AVERAGE_Z_ADJACENT, &foreZ);
 					noForeground = true; // <<<>>> somehow we could completely avoid drawing the foreground in this case, but we don't yet
 				} // if
 				if(!noForeground)
@@ -411,14 +414,16 @@ int main()
 			std::ostringstream textHUD;
 
 			if(noForeground) fgInfoStr = "foreground not detected"; else fgInfoStr = "* FOREGROUND DETECTED *";
+			if(backgroundEstablished < OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES) fgInfoStr = "Establishing Background";
 			textHUD.setf(std::ios::fixed,std::ios::floatfield);
 			textHUD << std::setprecision(0) <<
+				"Frame: " << frameCount << std::endl <<
 				"Foreground Samples: " << statsZ.getNumSamples() << std::endl <<
 				fgInfoStr << std::endl <<
 				"Noise Filtered: " << numFiltered << std::endl <<
 				"Body Samples: " << statsBodyZ.getNumSamples() << std::endl <<
 				"zMin: " << statsZ.getMin() << std::endl <<
-				"zMed: " << statsZ.getMedian() << std::endl <<
+				"zMed: " << statsZ.getMidVal() << std::endl <<
 				"zMax: " << statsZ.getMax() << std::endl <<
 				"zMN: " << statsZ.getMean() << std::endl <<
 				"zSD: " << statsZ.getStdDev() << std::endl <<
@@ -429,6 +434,7 @@ int main()
 			textEntity->setText(textHUD.str());
 
 			viewer.frame();
+			++frameCount;
 		} // if
 		else
 		{

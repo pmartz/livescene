@@ -44,9 +44,13 @@ return(false); // <<<>>> not implemented
 
 bool Background::accumulateZBackgroundFromCleanPlate(const livescene::Image &cleanPlateZ, AccumulateMode mode, livescene::Image *foreZ)
 {
+	// Once this exceeds 1/n where n is the largest reasonable Z value, it has no more effect and we'll skip it
+	if(_bgZ.getAccumulation() > 1023) return(false);
+
 	const int maxSample = _bgZ.getSamples();
-	const float accumWeight = 1.0f / (cleanPlateZ.getAccumulation() + 1.0f); // only used in AVERAGE mode
+	const float accumWeight = 1.0f / (_bgZ.getAccumulation() + 1); // only used in AVERAGE mode
 	unsigned short *bgZData = (unsigned short *)_bgZ.getData();
+	unsigned short bgzZnull = (unsigned short)_bgZ.getNull();
 	unsigned short *foreZData = NULL;
 	unsigned short *cleanZData = (unsigned short *)cleanPlateZ.getData();
 	unsigned short cleanZnull = (unsigned short)cleanPlateZ.getNull();
@@ -68,7 +72,7 @@ bool Background::accumulateZBackgroundFromCleanPlate(const livescene::Image &cle
 		{
 			sample = column + line * width; // precacluate array subscript
 			const int cleanZsample = cleanZData[sample];
-			if(cleanZsample != cleanZnull)
+			if(cleanZsample != cleanZnull && cleanZsample != 0)
 			{
 				long delta = 0;
 				const int cleanZepsilon = (int)(cleanZsample * _discriminationEpsilonPercent); // margin of noise/error
@@ -115,8 +119,8 @@ bool Background::accumulateZBackgroundFromCleanPlate(const livescene::Image &cle
 								bgZData[sample] = cleanZsample; 
 							} // if
 							else
-							{ // average together existing data values
-								bgZData[sample] = (unsigned short)(accumWeight * ((float)bgZData[sample] + (float)cleanZsample));
+							{ // average together existing data values using weight and inverse weight derived from accumuation (truncate to short after add)
+								bgZData[sample] = (unsigned short)((accumWeight * (float)cleanZsample) + ((1.0f - accumWeight) * (float)bgZData[sample]));
 							} // else
 							if(foreZ)
 							{ // knock it out of foreground
@@ -130,7 +134,9 @@ bool Background::accumulateZBackgroundFromCleanPlate(const livescene::Image &cle
 		} // for column
 	} // for lines
 
-return(true);
+	_bgZ.increaseAccumulation();
+
+	return(true);
 } // Background::accumulateZBackgroundFromCleanPlate
 
 
