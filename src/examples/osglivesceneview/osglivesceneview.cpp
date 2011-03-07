@@ -8,6 +8,7 @@
 #include <liblivescene/Background.h>
 #include <iostream>
 #include <iomanip>
+#include <algorithm>
 
 #ifdef OSGWORKS_FOUND
 #  include <osgwTools/Shapes.h>
@@ -25,13 +26,24 @@
 #include <osg/PositionAttitudeTransform>
 #include <osgDB/WriteFile>
 
+
 const int OSG_LIVESCENEVIEW_BACKGROUND_NOISE_SAMPLES(1500); // fewer than this many foreground samples in a frame are presumed to be background noise
 const int OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES(10); // Assume the first n frames are empty background, for calibration
+
+// configure these to taste
+bool PolygonsMode(true),
+IsolateBackground(true),
+ShowBackground(false),
+textureForeground(false),
+textureBackground(true),
+dynamicAccumulateBackground(true); // this option takes "empty" frames and merges them with the background. It costs about 1fps.
+
 
 static const int NominalFrameW = 640, NominalFrameH = 480; // <<<>>> these should be made dynamic
 unsigned long int frameCount(0);
 
-osg::ref_ptr<osg::Group> topGroup;
+
+osg::ref_ptr<osg::PositionAttitudeTransform> sceneTopTransform;
 // for HUD and any other screen-space elements
 osg::ref_ptr<osg::Group> screenElementsGroup;
 osg::ref_ptr<osg::Geode> screenTextGeode;
@@ -108,9 +120,8 @@ void buildHUD(void)
 
 int main()
 {
-	bool PolygonsMode(true), IsolateBackground(true), ShowBackground(true), textureForeground(false), textureBackground(true);
 	osg::Vec4 foreColor(0.0, 0.7, 1.0, 1.0), backColor(1.0, 1.0, 1.0, 1.0);
-	livescene::ImageStatistics statsX, statsY, statsZ;
+	livescene::ImageStatistics statsForeX, statsForeY, statsForeZ;
 	livescene::ImageStatistics statsBodyX, statsBodyY, statsBodyZ;
     const int nominalFrameD( 1024 ); // <<<>>> these should be made dynamic
     osg::Matrix d2w = livescene::makeDeviceToWorldMatrix( NominalFrameW, NominalFrameH, nominalFrameD /*, TBD Device device */ );
@@ -161,7 +172,9 @@ int main()
 		} // if
 	} // if
 
-	topGroup = new osg::Group;
+	sceneTopTransform = new osg::PositionAttitudeTransform;
+	sceneTopTransform->setAttitude(osg::Quat(osg::DegreesToRadians(135.0), osg::Vec3(1.0, 0.0, 0.0)));
+
 
 	osg::ref_ptr< osg::Image > imageFore = new osg::Image;
     imageFore->setDataVariance( osg::Object::DYNAMIC );
@@ -202,18 +215,19 @@ int main()
     osg::ref_ptr<osg::Group> kinectGroup = new osg::Group;
     kinectGroup->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
 	kinectGroup->getOrCreateStateSet()->setAttribute( new osg::Point( 3.0f ), osg::StateAttribute::ON );
-	topGroup->addChild(kinectGroup.get());
+	sceneTopTransform->addChild(kinectGroup.get());
 
 	// add HUD
 	buildHUD();
-	topGroup->addChild(screenElementsGroup.get());
+	sceneTopTransform->addChild(screenElementsGroup.get());
 
 	// add marker
 	buildMarker();
-	topGroup->addChild(fgMarkerPAT.get());
+	sceneTopTransform->addChild(fgMarkerPAT.get());
+	fgMarkerPAT->setNodeMask(0); // hide it initially
 
 	// set scene data
-	viewer.setSceneData( topGroup.get() );
+	viewer.setSceneData( sceneTopTransform.get() );
 
 	bool debugOneShot(false), firstFrame(true);
 	
@@ -261,15 +275,18 @@ int main()
 				background.extractZBackground(imageZ, foreZ); // wipe out everything that is already in the background plate
 
 				// calculate some stats
-				foreZ.calcStatsXYZ(&statsX, &statsY, &statsZ);
+				foreZ.calcStatsXYZ(&statsForeX, &statsForeY, &statsForeZ);
 				
 				// we can only dynamically accumulate background when we don't think there's a foreground object in frame,
 				// because foreground objects contacting background objects may get 'sucked into' the background
-				if(backgroundEstablished >= OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES && statsZ.getNumSamples() < OSG_LIVESCENEVIEW_BACKGROUND_NOISE_SAMPLES) // very small amount of foreground
+				if(backgroundEstablished >= OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES && statsForeZ.getNumSamples() < OSG_LIVESCENEVIEW_BACKGROUND_NOISE_SAMPLES) // very small amount of foreground
 				{
 					// add it to the background
 					// make sure we're only adding it where it's Z-threshold adjacent to existing background (MIN_Z_ADJACENT)
-					background.accumulateBackgroundFromCleanPlate(imageRGB, imageZ, livescene::Background::AVERAGE_Z_ADJACENT, &foreZ);
+					if(dynamicAccumulateBackground)
+					{
+						background.accumulateBackgroundFromCleanPlate(imageRGB, imageZ, livescene::Background::AVERAGE_Z_ADJACENT, &foreZ);
+					} // if
 					noForeground = true; // <<<>>> somehow we could completely avoid drawing the foreground in this case, but we don't yet
 				} // if
 				if(!noForeground)
@@ -365,32 +382,50 @@ int main()
 			float worldBoxXScale(0.0f), worldBoxYScale(0.0f), worldBoxZScale(0.0f);
 			if(noForeground)
 			{
-				statsX.clear(); statsY.clear(); statsZ.clear();
+				statsForeX.clear(); statsForeY.clear(); statsForeZ.clear();
 				statsBodyX.clear(); statsBodyY.clear(); statsBodyZ.clear();
 				fgMarkerPAT->setNodeMask(0);
 			} // if
 			else
 			{
 				fgMarkerPAT->setNodeMask(~0);
-				// update the marker
-				osg::Vec3 worldForegroundMean(livescene::transformPoint(d2w, statsX.getMean(), statsY.getMean(), statsZ.getMean()));
-				osg::Vec3 worldForegroundXStdDev, worldForegroundYStdDev, worldForegroundZStdDev;
-				worldForegroundXStdDev = livescene::transformPoint(d2w, statsX.getMean() + statsX.getStdDev(), statsY.getMean(), statsZ.getMean());
-				worldForegroundYStdDev = livescene::transformPoint(d2w, statsX.getMean(), statsY.getMean() + statsY.getStdDev(), statsZ.getMean());
-				worldForegroundZStdDev = livescene::transformPoint(d2w, statsX.getMean(), statsY.getMean(), statsZ.getMean() + statsZ.getStdDev());
-
 				// recalculate stats of body, using bounds of nth standard deviation to exclude extraneous noise
 				const float nthStdDev(2.8);
+				const float
+					xmin(statsForeX.getMean() - statsForeX.getStdDev() * nthStdDev),
+					ymin(statsForeY.getMean() - statsForeY.getStdDev() * nthStdDev), 
+					xmax(statsForeZ.getMean() - statsForeZ.getStdDev() * nthStdDev), 
+					ymax(statsForeX.getMean() + statsForeX.getStdDev() * nthStdDev), 
+					zmin(statsForeY.getMean() + statsForeY.getStdDev() * nthStdDev), 
+					zmax(statsForeZ.getMean() + statsForeZ.getStdDev() * nthStdDev);
+				const signed int
+					xminIntSigned(xmin),
+					yminIntSigned(ymin),
+					xmaxIntSigned(xmax),
+					ymaxIntSigned(ymax);
+				const signed int
+					xminIntClamped(std::max(xminIntSigned, 0)),
+					yminIntClamped(std::max(yminIntSigned, 0)),
+					xmaxIntClamped(std::min(xmaxIntSigned, (signed)foreZ.getWidth())),
+					ymaxIntClamped(std::min(ymaxIntSigned, (signed)foreZ.getHeight()));
 				BoxApproveCallback stdDevBoxApprove(osg::BoundingBox(
-					statsX.getMean() - statsX.getStdDev() * nthStdDev, // xmin
-					statsY.getMean() - statsY.getStdDev() * nthStdDev, // ymin
-					statsZ.getMean() - statsZ.getStdDev() * nthStdDev, // zmin
-					statsX.getMean() + statsX.getStdDev() * nthStdDev, // xmax
-					statsY.getMean() + statsY.getStdDev() * nthStdDev, // ymax
-					statsZ.getMean() + statsZ.getStdDev() * nthStdDev // zmax
+					xmin, // xmin
+					ymin, // ymin
+					zmin, // zmin
+					xmax, // xmax
+					ymax, // ymax
+					zmax // zmax
 					));
-				// <<<>>> this could be made faster by passing the XY bounding box as a limiter
-				foreZ.calcStatsXYZ(&statsBodyX, &statsBodyY, &statsBodyZ, &stdDevBoxApprove);
+				// this is faster by passing the XY bounding box as a limiter
+				foreZ.calcStatsXYZBounded(xminIntClamped, yminIntClamped, xmaxIntClamped, ymaxIntClamped,
+					&statsBodyX, &statsBodyY, &statsBodyZ, &stdDevBoxApprove);
+
+				// update the marker
+				osg::Vec3 worldForegroundMean(livescene::transformPoint(d2w, statsForeX.getMean(), statsForeY.getMean(), statsForeZ.getMean()));
+				osg::Vec3 worldForegroundXStdDev, worldForegroundYStdDev, worldForegroundZStdDev;
+				worldForegroundXStdDev = livescene::transformPoint(d2w, statsForeX.getMean() + statsForeX.getStdDev(), statsForeY.getMean(), statsForeZ.getMean());
+				worldForegroundYStdDev = livescene::transformPoint(d2w, statsForeX.getMean(), statsForeY.getMean() + statsForeY.getStdDev(), statsForeZ.getMean());
+				worldForegroundZStdDev = livescene::transformPoint(d2w, statsForeX.getMean(), statsForeY.getMean(), statsForeZ.getMean() + statsForeZ.getStdDev());
 
 				osg::Vec3 worldBodyMean(livescene::transformPoint(d2w, statsBodyX.getMean(), statsBodyY.getMean(), statsBodyZ.getMean()));
 				osg::Vec3 worldBodyXStdDev, worldBodyYStdDev, worldBodyZStdDev;
@@ -416,22 +451,27 @@ int main()
 			if(noForeground) fgInfoStr = "foreground not detected"; else fgInfoStr = "* FOREGROUND DETECTED *";
 			if(backgroundEstablished < OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES) fgInfoStr = "Establishing Background";
 			textHUD.setf(std::ios::fixed,std::ios::floatfield);
-			textHUD << std::setprecision(0) <<
+			textHUD << std::setprecision(0) << ". " << std::endl << // blank line leaves room for framerate counter
 				"Frame: " << frameCount << std::endl <<
-				"Foreground Samples: " << statsZ.getNumSamples() << std::endl <<
+				"Foreground Samples: " << statsForeZ.getNumSamples() << std::endl <<
 				fgInfoStr << std::endl <<
 				"Noise Filtered: " << numFiltered << std::endl <<
 				"Body Samples: " << statsBodyZ.getNumSamples() << std::endl <<
-				"zMin: " << statsZ.getMin() << std::endl <<
-				"zMed: " << statsZ.getMidVal() << std::endl <<
-				"zMax: " << statsZ.getMax() << std::endl <<
-				"zMN: " << statsZ.getMean() << std::endl <<
-				"zSD: " << statsZ.getStdDev() << std::endl <<
-				"xMN: " << statsX.getMean() << std::endl <<
-				"xSD: " << statsX.getStdDev() << std::endl <<
-				"yMN: " << statsY.getMean() << std::endl <<
-				"ySD: " << statsY.getStdDev();
-			textEntity->setText(textHUD.str());
+				"FzMin: " << statsForeZ.getMin() << std::endl <<
+				"FzMed: " << statsForeZ.getMidVal() << std::endl <<
+				"FzMax: " << statsForeZ.getMax() << std::endl <<
+				"FzMN: " << statsForeZ.getMean() << std::endl <<
+				"FzSD: " << statsForeZ.getStdDev() << std::endl <<
+				"FxMN: " << statsForeX.getMean() << std::endl <<
+				"FxSD: " << statsForeX.getStdDev() << std::endl <<
+				"FyMN: " << statsForeY.getMean() << std::endl <<
+				"FySD: " << statsForeY.getStdDev() << std::endl <<
+
+				"BzSD: " << statsBodyZ.getStdDev() << std::endl <<
+				"BxSD: " << statsBodyX.getStdDev() << std::endl <<
+				"BySD: " << statsBodyY.getStdDev();
+				
+				textEntity->setText(textHUD.str());
 
 			viewer.frame();
 			++frameCount;
