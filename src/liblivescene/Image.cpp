@@ -288,8 +288,16 @@ bool Image::minimumDeltaToNeighbors(const unsigned int &X, const unsigned int &Y
 } // 
 
 
-
 bool Image::calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ, ApproveCallback *approveCallback)
+{
+	return(calcStatsXYZBounded(0, 0, getWidth(), getHeight(),
+		destStatsX, destStatsY, destStatsZ, approveCallback));
+} // Image::calcStatsXYZ
+
+
+bool Image::calcStatsXYZBounded(const unsigned int &Xlow, const unsigned int &Ylow, const unsigned int &Xhigh, const unsigned int &Yhigh,
+								livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ,
+								ApproveCallback *approveCallback)
 {
 	if(!(_format == DEPTH_10BIT || _format == DEPTH_11BIT))
 	{
@@ -300,27 +308,27 @@ bool Image::calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::Imag
 	if(destStatsY) destStatsY->clear();
 	if(destStatsZ) destStatsZ->clear();
 
-	int width(getWidth()), height(getHeight());
+	unsigned int width(getWidth()), height(getHeight());
 	short *depthBuffer = (short *)getData();
 
-	unsigned int loopSub(0), vertSub(0), indexSub(0), texSub(0), normSub(0);
-	for(int line = 0; line < height; ++line)
+	unsigned int lineSub(0);
+	for(unsigned int line = Ylow; line < Yhigh; ++line)
 	{
-		for(int column = 0; column < width; ++column)
+		lineSub = line * width;
+		for(unsigned int column = Xlow; column < Xhigh; ++column)
 		{
-			short originalDepth = depthBuffer[loopSub];
+			short originalDepth = depthBuffer[lineSub + column];
 			if(isCellValueValid(originalDepth) && (!approveCallback || (*approveCallback)(column, line, originalDepth)))
 			{
 				if(destStatsX) destStatsX->addSample(column);
 				if(destStatsY) destStatsY->addSample(line);
 				if(destStatsZ) destStatsZ->addSample(originalDepth);
 			} // if
-			++loopSub;
 		} // for
 	} // for lines
 
 return(true);
-} // Image::calcStatsZ
+} // Image::calcStatsXYZBounded
 
 
 

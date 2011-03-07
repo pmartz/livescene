@@ -130,6 +130,7 @@ class LIVESCENE_EXPORT Image
 		// calculate useful statistics, only operates on Z data, not RGB
 		// approveCallback allows you to provide a callback functor that can custom approve/reject samples
 		bool calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ, ApproveCallback *approveCallback = 0);
+		bool calcStatsXYZBounded(const unsigned int &Xlow, const unsigned int &Ylow, const unsigned int &Xhigh, const unsigned int &Yhigh, livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ, ApproveCallback *approveCallback = 0);
 
 		// this will ensure the image is allocated to the proper size and ready to write to
 		bool preAllocate(void);
