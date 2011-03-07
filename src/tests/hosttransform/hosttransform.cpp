@@ -92,7 +92,7 @@ int main()
     viewer.setSceneData( root.get() );
 
     const int nominalFrameW( 640 ), nominalFrameH( 480 ), nominalFrameD( 1024 );
-    osg::Matrix d2w = livescene::makeDeviceToWorldMatrix( nominalFrameW, nominalFrameH, nominalFrameD /*, TBD Device device */ );
+    osg::Matrix d2w = livescene::makeDeviceToWorldMatrixOSG( nominalFrameW, nominalFrameH, nominalFrameD /*, TBD Device device */ );
 
     bool firstFrame( true );
     while( !viewer.done() )
@@ -100,7 +100,7 @@ int main()
         livescene::Image imageZ( nominalFrameW, nominalFrameH, 2, livescene::DEPTH_10BIT );
         imageCapabilitiesZ->getImageSync( imageZ );
 
-        int validPixels = livescene::transform( vecArray.get(), d2w, imageZ, 1023 );
+        int validPixels = livescene::transformOSG( vecArray.get(), d2w, imageZ, 1023 );
         pointsDrawArrays->setCount( validPixels );
 
         if( firstFrame )

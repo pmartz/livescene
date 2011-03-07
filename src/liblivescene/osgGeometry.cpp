@@ -5,7 +5,7 @@
 
 namespace livescene {
 
-	osg::Vec3 transformPoint( const osg::Matrix& m, const int &coordX, const int &coordY, const unsigned short &valueZ )
+	osg::Vec3 transformPointOSG( const osg::Matrix& m, const int &coordX, const int &coordY, const unsigned short &valueZ )
 {
     osg::Vec4 deviceCoord( coordX, coordY, valueZ, 1.0 );
     osg::Vec4 clipCoord = deviceCoord * m;
@@ -14,7 +14,7 @@ namespace livescene {
     return(eyeCoord);
 }
 
-int transform( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image imageZ, const unsigned short invalid )
+int transformOSG( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image imageZ, const unsigned short invalid )
 {
     const int width = imageZ.getWidth();
     const int height = imageZ.getHeight();
@@ -31,7 +31,7 @@ int transform( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image
             unsigned short value = *dataPtr++;
             if( ( value != imageZ.getNull() ) && ( value != invalid ) )
             {
-				(*vec)[ vdx++ ] = transformPoint(m, sdx, tdx, value);
+				(*vec)[ vdx++ ] = transformPointOSG(m, sdx, tdx, value);
             }
         }
     }
@@ -102,7 +102,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &l
 	if(lsgeometry.getEntityType() == livescene::Geometry::GEOMETRY_POINTS)
     {
 	    const int nominalFrameW( 640 ), nominalFrameH( 480 ), nominalFrameD( 1024 ); // <<<>>> these should be made dynamic
-	    osg::Matrix d2w = livescene::makeDeviceToWorldMatrix( nominalFrameW, nominalFrameH, nominalFrameD /*, TBD Device device */ );
+	    osg::Matrix d2w = livescene::makeDeviceToWorldMatrixOSG( nominalFrameW, nominalFrameH, nominalFrameD /*, TBD Device device */ );
 
 
         // create a Vec3Array and add to it all my coordinates.
@@ -116,7 +116,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &l
 		float *floatTexCoords = lsgeometry.getTexCoord();
 		for(unsigned int vertexLoop = 0; vertexLoop < lsgeometry.getNumVertices(); ++vertexLoop)
 		{
-	        vertices->push_back(transformPoint(d2w, shortVertices[vertexLoop * 3], shortVertices[vertexLoop * 3 + 1], shortVertices[vertexLoop * 3 + 2]));
+	        vertices->push_back(transformPointOSG(d2w, shortVertices[vertexLoop * 3], shortVertices[vertexLoop * 3 + 1], shortVertices[vertexLoop * 3 + 2]));
 			texCoords->push_back(osg::Vec2(floatTexCoords[vertexLoop * 2], floatTexCoords[vertexLoop * 2 + 1]));
 		} // for
         
@@ -188,7 +188,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &lsg
 	if(lsgeometry.getEntityType() == livescene::Geometry::GEOMETRY_FACES)
     {
 	    const int nominalFrameW( 640 ), nominalFrameH( 480 ), nominalFrameD( 1024 ); // <<<>>> these should be made dynamic
-	    osg::Matrix d2w = livescene::makeDeviceToWorldMatrix( nominalFrameW, nominalFrameH, nominalFrameD /*, TBD Device device */ );
+	    osg::Matrix d2w = livescene::makeDeviceToWorldMatrixOSG( nominalFrameW, nominalFrameH, nominalFrameD /*, TBD Device device */ );
 
         // create a Vec3Array and add to it all the coordinates.
 		osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array;
@@ -205,7 +205,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &lsg
 		unsigned int *intIndices = lsgeometry.getIndices();
 		for(unsigned int vertexLoop(0); vertexLoop < lsgeometry.getNumVertices(); ++vertexLoop)
 		{
-			vertices->push_back(transformPoint(d2w, shortVertices[vertexLoop * 3], shortVertices[vertexLoop * 3 + 1], shortVertices[vertexLoop * 3 + 2]));
+			vertices->push_back(transformPointOSG(d2w, shortVertices[vertexLoop * 3], shortVertices[vertexLoop * 3 + 1], shortVertices[vertexLoop * 3 + 2]));
 			texCoords->push_back(osg::Vec2(floatTexCoords[vertexLoop * 2], floatTexCoords[vertexLoop * 2 + 1]));
 		} // for
 		for(unsigned int idxLoop(0); idxLoop < lsgeometry.getNumIndices(); ++idxLoop)
@@ -277,11 +277,11 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &lsg
 	return(mt.release());
 #endif
 
-osg::Matrix makeDeviceToWorldMatrix( const int width, const int height, const int depth /*, TBD Device device */ )
+osg::Matrix makeDeviceToWorldMatrixOSG( const int width, const int height, const int depth /*, TBD Device device */ )
 {
     // These values are control parameters that will vary from
     // one device to the next. Currently putting in values that
-    // closely approximate the Kinect, resulting in a net transform
+    // closely approximate the Kinect, resulting in a net transformOSG
     // matrix that is pretty close to the "magic matrix" used in
     // the OpenKinect project.
     const bool y0IsUp( true ); // y==0 is at the top in Kinect, so this is true.

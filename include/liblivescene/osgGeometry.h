@@ -277,42 +277,42 @@ come from the device, but are currently hardcoded.
 \param height Height of a z image obtained from the camera (i.e., 480).
 \param depth Maximum depth value (i.e., 1024 for 10-bit, 2048 for 11-bit).
 */
-LIVESCENE_EXPORT osg::Matrix makeDeviceToWorldMatrix( const int width, const int height, const int depth /*, TBD Device device */ );
+LIVESCENE_EXPORT osg::Matrix makeDeviceToWorldMatrixOSG( const int width, const int height, const int depth /*, TBD Device device */ );
 
 /** \brief Transform x, y, z data point into OSG Vec3.
 Compute a device coordinate vector (s, t, elementValue, 1. ),
-then transform that by the specified matrix \c m. Results are assumed to be in clip coordinates,
+then transformOSG that by the specified matrix \c m. Results are assumed to be in clip coordinates,
 and clip coord xyz values are divided by clip coord w to produve final eye coordinate xyz
 values.
 
-\param m Input. Typically obtained from the makeDeviceToWorldMatrix() function.
+\param m Input. Typically obtained from the makeDeviceToWorldMatrixOSG() function.
 \param coordX Input. Raster X coordinate of sample.
 \param coordY Input. Raster Y coordinate of sample.
 \param valueZ Input. Depth value obtained from the z camera.
-\see transform()
+\see transformOSG()
 \return Contains the transformed output.
 */
-LIVESCENE_EXPORT osg::Vec3 transformPoint( const osg::Matrix& m, const int &coordX, const int &coordY, const unsigned short &valueZ );
+LIVESCENE_EXPORT osg::Vec3 transformPointOSG( const osg::Matrix& m, const int &coordX, const int &coordY, const unsigned short &valueZ );
 
 /** \brief Transform z image data into an OSG Vec3Array.
 For each elements of \c imageZ, compute a device coordinate vector (s, t, elementValue, 1. ),
-then transform that by the specified matrix \c m. Results are assumed to be in clip coordinates,
+then transformOSG that by the specified matrix \c m. Results are assumed to be in clip coordinates,
 and clip coord xyz values are divided by clip coord w to produve final eye coordinate xyz
 values. These are stored sequentially in \c vec.
 
 This function resizes \c vec to hold the necessary number of vectors, as computed by
 \c imageZ->getWidth() and \c imageZ->getHeight().
 
-Calls \c transformPoint() to do the actual transform.
+Calls \c transformPointOSG() to do the actual transformOSG.
 
 \param vec Output. Contains the transformed output. This function marks it as dirty.
-\param m Input. Typically obtained from the makeDeviceToWorldMatrix() function.
+\param m Input. Typically obtained from the makeDeviceToWorldMatrixOSG() function.
 \param imageZ Input. Array of depth values obtained from the z camera.
 \param invalid Values in \c imageZ equal to this value are discarded.
-\see transformPoint()
+\see transformPointOSG()
 \return Number of valid values (not maxZ and not Image::NULL).
 */
-LIVESCENE_EXPORT int transform( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image imageZ, const unsigned short invalid=2047 );
+LIVESCENE_EXPORT int transformOSG( osg::Vec3Array* vec, const osg::Matrix& m, const livescene::Image imageZ, const unsigned short invalid=2047 );
 
 
 // namespace livescene
