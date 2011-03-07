@@ -194,6 +194,7 @@ bool DeviceFreenect::getImageSync(livescene::Image &image)
 		{
 			image.setTimestamp(ts);
 			image.setData(buffer);
+			image.invalidateInternalStats();
 			return(true);
 		} // if
 	} // if
@@ -206,6 +207,7 @@ bool DeviceFreenect::getImageSync(livescene::Image &image)
 			image.setTimestamp(ts);
 			image.setData(buffer);
 			image.setNull(1023);
+			image.invalidateInternalStats();
 			return(true);
 		} // if
 	} // else if
@@ -218,6 +220,7 @@ bool DeviceFreenect::getImageSync(livescene::Image &image)
 			image.setTimestamp(ts);
 			image.setData(buffer);
 			image.setNull(2047);
+			image.invalidateInternalStats();
 			return(true);
 		} // if
 	} // else if
