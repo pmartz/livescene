@@ -6,9 +6,9 @@
 #include <liblivescene/GeometryBuilder.h>
 #include <liblivescene/osgGeometry.h>
 #include <liblivescene/Background.h>
+#include <liblivescene/Detect.h>
 #include <iostream>
 #include <iomanip>
-#include <algorithm>
 
 #ifdef OSGWORKS_FOUND
 #  include <osgwTools/Shapes.h>
@@ -56,18 +56,6 @@ osg::ref_ptr<osg::PositionAttitudeTransform>fgMarkerPAT;
 
 // some strings that get formatted together to make the HUD metadata
 std::string fgInfoStr, minDepth, maxDepth;
-
-class BoxApproveCallback : public livescene::ApproveCallback
-{
-public:
-	BoxApproveCallback(osg::BoundingBox bbox) : _bbox(bbox) {}
-	bool operator ()(const unsigned int &xCoord, const unsigned int &yCoord, const unsigned short &zCoord)
-	{
-		return(_bbox.contains(osg::Vec3f(xCoord, yCoord, zCoord)));
-	} // operator ()
-private:
-	osg::BoundingBox _bbox;
-}; // BoxApproveCallback 
 
 void buildMarker(void)
 {
@@ -121,10 +109,8 @@ void buildHUD(void)
 int main()
 {
 	osg::Vec4 foreColor(0.0, 0.7, 1.0, 1.0), backColor(1.0, 1.0, 1.0, 1.0);
-	livescene::ImageStatistics statsForeX, statsForeY, statsForeZ;
-	livescene::ImageStatistics statsBodyX, statsBodyY, statsBodyZ;
     const int nominalFrameD( 1024 ); // <<<>>> these should be made dynamic
-    osg::Matrix d2w = livescene::makeDeviceToWorldMatrix( NominalFrameW, NominalFrameH, nominalFrameD /*, TBD Device device */ );
+    osg::Matrix d2w = livescene::makeDeviceToWorldMatrixOSG( NominalFrameW, NominalFrameH, nominalFrameD /*, TBD Device device */ );
 
 	std::cout << livescene::getVersionString() << std::endl;
 
@@ -274,12 +260,12 @@ int main()
 				foreZ.setNull(imageZ.getNull()); // transfer over NULL value
 				background.extractZBackground(imageZ, foreZ); // wipe out everything that is already in the background plate
 
-				// calculate some stats
-				foreZ.calcStatsXYZ(&statsForeX, &statsForeY, &statsForeZ);
+				// calculate and cache foreground stats
+				foreZ.calcInternalStatsXYZ();
 				
 				// we can only dynamically accumulate background when we don't think there's a foreground object in frame,
 				// because foreground objects contacting background objects may get 'sucked into' the background
-				if(backgroundEstablished >= OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES && statsForeZ.getNumSamples() < OSG_LIVESCENEVIEW_BACKGROUND_NOISE_SAMPLES) // very small amount of foreground
+				if(backgroundEstablished >= OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES && foreZ.getInternalStatsZ().getNumSamples() < OSG_LIVESCENEVIEW_BACKGROUND_NOISE_SAMPLES) // very small amount of foreground
 				{
 					// add it to the background
 					// make sure we're only adding it where it's Z-threshold adjacent to existing background (MIN_Z_ADJACENT)
@@ -379,97 +365,60 @@ int main()
 
 			} // oneshot
 
-			float worldBoxXScale(0.0f), worldBoxYScale(0.0f), worldBoxZScale(0.0f);
-			if(noForeground)
-			{
-				statsForeX.clear(); statsForeY.clear(); statsForeZ.clear();
-				statsBodyX.clear(); statsBodyY.clear(); statsBodyZ.clear();
-				fgMarkerPAT->setNodeMask(0);
+			livescene::BodyMass detectedBodies;
+			fgMarkerPAT->setNodeMask(0); // start by hiding body bounds in case we don't find any bodies
+			if(!noForeground)
+			{ // foreground detected
+				if(detectedBodies.detect(foreZ)) // try to detect bodies
+				{
+					fgMarkerPAT->setNodeMask(~0); // make the body bounds box visible
+
+					// update the body mass marker
+					osg::Vec3 worldBodyMean(livescene::transformPointOSG(d2w, (detectedBodies.getCentroid(0))[0], (detectedBodies.getCentroid(0))[1], (detectedBodies.getCentroid(0))[2]));
+					osg::Vec3 worldBodyXStdDev, worldBodyYStdDev, worldBodyZStdDev;
+					worldBodyXStdDev = livescene::transformPointOSG(d2w, (detectedBodies.getCentroid(0))[0] + (detectedBodies.getExtent(0))[0], (detectedBodies.getCentroid(0))[1], (detectedBodies.getCentroid(0))[2]);
+					worldBodyYStdDev = livescene::transformPointOSG(d2w, (detectedBodies.getCentroid(0))[0], (detectedBodies.getCentroid(0))[1] + (detectedBodies.getExtent(0))[1], (detectedBodies.getCentroid(0))[2]);
+					worldBodyZStdDev = livescene::transformPointOSG(d2w, (detectedBodies.getCentroid(0))[0], (detectedBodies.getCentroid(0))[1], (detectedBodies.getCentroid(0))[2] + (detectedBodies.getExtent(0))[2]);
+
+					// because we only see the front half of objects, their mass is baised forward 1/2 in Z
+					// To compensate, we can average their position half/half with the worldBodyZStdDev, which
+					// re-biases it backwards to where it ought to be
+					//fgMarkerPAT->setPosition((worldBodyMean + worldBodyZStdDev) * 0.5);
+					fgMarkerPAT->setPosition(worldBodyMean);
+
+					const float
+						worldBoxXScale(2.0f * (worldBodyXStdDev - worldBodyMean).x()), // multiply by two, since stddev is sort of a radius-like, on one side of mean
+						worldBoxYScale(2.0f * (worldBodyYStdDev - worldBodyMean).y()), // multiply by two, since stddev is sort of a radius-like, on one side of mean
+						worldBoxZScale(2.0f * (worldBodyZStdDev - worldBodyMean).z()); // multiply by two, since stddev is sort of a radius-like, on one side of mean
+					fgMarkerPAT->setScale(osg::Vec3(worldBoxXScale, worldBoxYScale, worldBoxZScale));
+				} // if
 			} // if
-			else
-			{
-				fgMarkerPAT->setNodeMask(~0);
-				// recalculate stats of body, using bounds of nth standard deviation to exclude extraneous noise
-				const float nthStdDev(2.8);
-				const float
-					xmin(statsForeX.getMean() - statsForeX.getStdDev() * nthStdDev),
-					ymin(statsForeY.getMean() - statsForeY.getStdDev() * nthStdDev), 
-					xmax(statsForeZ.getMean() - statsForeZ.getStdDev() * nthStdDev), 
-					ymax(statsForeX.getMean() + statsForeX.getStdDev() * nthStdDev), 
-					zmin(statsForeY.getMean() + statsForeY.getStdDev() * nthStdDev), 
-					zmax(statsForeZ.getMean() + statsForeZ.getStdDev() * nthStdDev);
-				const signed int
-					xminIntSigned(xmin),
-					yminIntSigned(ymin),
-					xmaxIntSigned(xmax),
-					ymaxIntSigned(ymax);
-				const signed int
-					xminIntClamped(std::max(xminIntSigned, 0)),
-					yminIntClamped(std::max(yminIntSigned, 0)),
-					xmaxIntClamped(std::min(xmaxIntSigned, (signed)foreZ.getWidth())),
-					ymaxIntClamped(std::min(ymaxIntSigned, (signed)foreZ.getHeight()));
-				BoxApproveCallback stdDevBoxApprove(osg::BoundingBox(
-					xmin, // xmin
-					ymin, // ymin
-					zmin, // zmin
-					xmax, // xmax
-					ymax, // ymax
-					zmax // zmax
-					));
-				// this is faster by passing the XY bounding box as a limiter
-				foreZ.calcStatsXYZBounded(xminIntClamped, yminIntClamped, xmaxIntClamped, ymaxIntClamped,
-					&statsBodyX, &statsBodyY, &statsBodyZ, &stdDevBoxApprove);
-
-				// update the marker
-				osg::Vec3 worldForegroundMean(livescene::transformPoint(d2w, statsForeX.getMean(), statsForeY.getMean(), statsForeZ.getMean()));
-				osg::Vec3 worldForegroundXStdDev, worldForegroundYStdDev, worldForegroundZStdDev;
-				worldForegroundXStdDev = livescene::transformPoint(d2w, statsForeX.getMean() + statsForeX.getStdDev(), statsForeY.getMean(), statsForeZ.getMean());
-				worldForegroundYStdDev = livescene::transformPoint(d2w, statsForeX.getMean(), statsForeY.getMean() + statsForeY.getStdDev(), statsForeZ.getMean());
-				worldForegroundZStdDev = livescene::transformPoint(d2w, statsForeX.getMean(), statsForeY.getMean(), statsForeZ.getMean() + statsForeZ.getStdDev());
-
-				osg::Vec3 worldBodyMean(livescene::transformPoint(d2w, statsBodyX.getMean(), statsBodyY.getMean(), statsBodyZ.getMean()));
-				osg::Vec3 worldBodyXStdDev, worldBodyYStdDev, worldBodyZStdDev;
-				worldBodyXStdDev = livescene::transformPoint(d2w, statsBodyX.getMean() + statsBodyX.getStdDev(), statsBodyY.getMean(), statsBodyZ.getMean());
-				worldBodyYStdDev = livescene::transformPoint(d2w, statsBodyX.getMean(), statsBodyY.getMean() + statsBodyY.getStdDev(), statsBodyZ.getMean());
-				worldBodyZStdDev = livescene::transformPoint(d2w, statsBodyX.getMean(), statsBodyY.getMean(), statsBodyZ.getMean() + statsBodyZ.getStdDev());
-
-				// because we only see the front half of objects, their mass is baised forward 1/2 in Z
-				// To compensate, we can average their position half/half with the worldBodyZStdDev, which
-				// re-biases it backwards to where it ought to be
-				//fgMarkerPAT->setPosition((worldBodyMean + worldBodyZStdDev) * 0.5);
-				fgMarkerPAT->setPosition(worldBodyMean);
-
-				worldBoxXScale = 2 * (worldBodyXStdDev - worldBodyMean).x(); // multiply by two, since stddev is sort of a radius-like, on one side of mean
-				worldBoxYScale = 2 * (worldBodyYStdDev - worldBodyMean).y(); // multiply by two, since stddev is sort of a radius-like, on one side of mean
-				worldBoxZScale = 2 * (worldBodyZStdDev - worldBodyMean).z(); // multiply by two, since stddev is sort of a radius-like, on one side of mean
-				fgMarkerPAT->setScale(osg::Vec3(worldBoxXScale, worldBoxYScale, worldBoxZScale));
-			} // else
 			
 			// update the HUD
 			std::ostringstream textHUD;
 
 			if(noForeground) fgInfoStr = "foreground not detected"; else fgInfoStr = "* FOREGROUND DETECTED *";
 			if(backgroundEstablished < OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES) fgInfoStr = "Establishing Background";
+			if(detectedBodies.getBodyPresent()) fgInfoStr = "** BODY DETECTED **";
 			textHUD.setf(std::ios::fixed,std::ios::floatfield);
 			textHUD << std::setprecision(0) << ". " << std::endl << // blank line leaves room for framerate counter
 				"Frame: " << frameCount << std::endl <<
-				"Foreground Samples: " << statsForeZ.getNumSamples() << std::endl <<
+				"Foreground Samples: " << foreZ.getInternalStatsZ().getNumSamples() << std::endl <<
 				fgInfoStr << std::endl <<
 				"Noise Filtered: " << numFiltered << std::endl <<
-				"Body Samples: " << statsBodyZ.getNumSamples() << std::endl <<
-				"FzMin: " << statsForeZ.getMin() << std::endl <<
-				"FzMed: " << statsForeZ.getMidVal() << std::endl <<
-				"FzMax: " << statsForeZ.getMax() << std::endl <<
-				"FzMN: " << statsForeZ.getMean() << std::endl <<
-				"FzSD: " << statsForeZ.getStdDev() << std::endl <<
-				"FxMN: " << statsForeX.getMean() << std::endl <<
-				"FxSD: " << statsForeX.getStdDev() << std::endl <<
-				"FyMN: " << statsForeY.getMean() << std::endl <<
-				"FySD: " << statsForeY.getStdDev() << std::endl <<
+				"FzMin: " << foreZ.getInternalStatsZ().getMin() << std::endl <<
+				"FzMed: " << foreZ.getInternalStatsZ().getMidVal() << std::endl <<
+				"FzMax: " << foreZ.getInternalStatsZ().getMax() << std::endl <<
+				"FzMN: " << foreZ.getInternalStatsZ().getMean() << std::endl <<
+				"FzSD: " << foreZ.getInternalStatsZ().getStdDev() << std::endl <<
+				"FxMN: " << foreZ.getInternalStatsX().getMean() << std::endl <<
+				"FxSD: " << foreZ.getInternalStatsX().getStdDev() << std::endl <<
+				"FyMN: " << foreZ.getInternalStatsY().getMean() << std::endl <<
+				"FySD: " << foreZ.getInternalStatsY().getStdDev() << std::endl <<
 
-				"BzSD: " << statsBodyZ.getStdDev() << std::endl <<
-				"BxSD: " << statsBodyX.getStdDev() << std::endl <<
-				"BySD: " << statsBodyY.getStdDev();
+				"BzSD: " << (detectedBodies.getExtent(0))[2] << std::endl <<
+				"BxSD: " << (detectedBodies.getExtent(0))[0] << std::endl <<
+				"BySD: " << (detectedBodies.getExtent(0))[1];
 				
 				textEntity->setText(textHUD.str());
 
