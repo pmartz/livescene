@@ -17,7 +17,7 @@
 namespace livescene {
 
 
-/** \brief Customizable class for generating events from devive-detected motion.
+/** \brief Customizable class for generating events from device-detected motion.
 
 Read about the multitouch feature commit at this web page.
 http://www.openscenegraph.org/projects/osg/changeset/11934
