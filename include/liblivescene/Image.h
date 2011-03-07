@@ -78,7 +78,8 @@ class LIVESCENE_EXPORT Image
 		/**  */
 		Image(const Image &image, bool cloneData = false); // copy constructor can make a local, persistent copy of the data
 		Image(int width = 640, int height = 480, int depth = 1, VideoFormat format = VIDEO_RGB)
-			: _width(width), _height(height), _depth(depth), _format(format), _timestamp(0), _nullValue(0), _data(0), _accumulation(1), _dataSelfAllocated(false)
+			: _width(width), _height(height), _depth(depth), _format(format), _timestamp(0), _nullValue(0), _data(0), _accumulation(1), _dataSelfAllocated(false),
+			_xStatValid(false), _yStatValid(false), _zStatValid(false)
 		{}
 		~Image();
 
@@ -132,6 +133,14 @@ class LIVESCENE_EXPORT Image
 		bool calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ, ApproveCallback *approveCallback = 0);
 		bool calcStatsXYZBounded(const unsigned int &Xlow, const unsigned int &Ylow, const unsigned int &Xhigh, const unsigned int &Yhigh, livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ, ApproveCallback *approveCallback = 0);
 
+		// this calculates full-frame XYZ stats and stores them in the cached internal stats object to avoid unnecessary recalcs
+		bool calcInternalStatsXYZ(ApproveCallback *approveCallback = 0);
+		// mark internal stats as invalid
+		void invalidateInternalStats(void) {_xStatValid = _yStatValid = _zStatValid = false; _xStat.clear(); _yStat.clear(); _zStat.clear(); }
+		const livescene::ImageStatistics &getInternalStatsX(void) const {return(_xStat);}
+		const livescene::ImageStatistics &getInternalStatsY(void) const {return(_yStat);}
+		const livescene::ImageStatistics &getInternalStatsZ(void) const {return(_zStat);}
+
 		// this will ensure the image is allocated to the proper size and ready to write to
 		bool preAllocate(void);
 
@@ -146,6 +155,10 @@ class LIVESCENE_EXPORT Image
         unsigned long _timestamp;
 		void *_data; // this is not resource tracked or freed, it's just a dumb pointer for transport
 		bool _dataSelfAllocated;
+
+		// image statistics
+		livescene::ImageStatistics _xStat, _yStat, _zStat;
+		bool _xStatValid, _yStatValid, _zStatValid;
 
 }; // Image
 

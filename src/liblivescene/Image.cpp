@@ -4,7 +4,7 @@
 #include <stdlib.h> // malloc/free
 #include <malloc.h> // malloc/free
 #include <memory.h> // memcpy
-#include <limits> // max()
+#include <limits> // numeric_limits::max()
 
 namespace livescene {
 
@@ -42,6 +42,13 @@ Image::Image(const Image &image, bool cloneData)
 	_format = image._format;
 	_timestamp = image._timestamp;
 	_nullValue = image._nullValue;
+
+	_xStatValid = image._xStatValid;
+	_yStatValid = image._yStatValid;
+	_zStatValid = image._zStatValid;
+	_xStat = image._xStat;
+	_yStat = image._yStat;
+	_zStat = image._zStat;
 	if(cloneData)
 	{
 		allocData(); // create a new image buffer
@@ -74,6 +81,13 @@ Image & Image::operator= (const Image & rhs)
 	_format = rhs._format;
 	_timestamp = rhs._timestamp;
 	_nullValue = rhs._nullValue;
+
+	_xStatValid = rhs._xStatValid;
+	_yStatValid = rhs._yStatValid;
+	_zStatValid = rhs._zStatValid;
+	_xStat = rhs._xStat;
+	_yStat = rhs._yStat;
+	_zStat = rhs._zStat;
 	if(rhs._dataSelfAllocated) // rhs owns its data, make our own copy of it
 	{
 		allocData(); // create a new image buffer
@@ -329,6 +343,21 @@ bool Image::calcStatsXYZBounded(const unsigned int &Xlow, const unsigned int &Yl
 
 return(true);
 } // Image::calcStatsXYZBounded
+
+
+bool Image::calcInternalStatsXYZ(ApproveCallback *approveCallback)
+{
+	if(_xStatValid && _yStatValid && _zStatValid)
+	{ // already valid and cached
+		return(true);
+	} // if
+	if(calcStatsXYZ(&_xStat, &_yStat, &_zStat, approveCallback))
+	{
+		_xStatValid = _yStatValid = _zStatValid = true;
+		return(true);
+	} // if
+	return(false);
+} // Image::calcInternalStatsXYZ
 
 
 
