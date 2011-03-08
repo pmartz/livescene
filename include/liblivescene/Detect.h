@@ -3,6 +3,8 @@
 #ifndef __LIVESCENE_DETECT_H__
 #define __LIVESCENE_DETECT_H__ 1
 
+#include <stack>
+#include <utility>
 #include "liblivescene/Export.h"
 #include "liblivescene/Image.h"
 
@@ -35,6 +37,11 @@ private:
 }; // Hand
 
 
+/** \brief Pair of coordinates, used in CoordStack */
+typedef std::pair<unsigned int, unsigned int> UIntPair;
+/** \brief Stack of coordinate pairs, used internally by sampleAndDepleteAdjacentThresholded(). */
+typedef std::stack<UIntPair> CoordStack;
+
 
 /** \brief Detect body mass(es)
 * Currently only supports a single body mass, but API supports multiple
@@ -61,6 +68,16 @@ private:
 	bool findMinimumZLocation(const livescene::Image &foreZ,
 		const unsigned int &Xlow, const unsigned int &Ylow, const unsigned int &Xhigh, const unsigned int &Yhigh,
 		const short &zThreshold, unsigned int &minZlocX, unsigned int &minZlocY, unsigned int &minZvalueZ);
+	// returns true if successful. WILL modify foreZtoDeplete during this process.
+	bool BodyMass::sampleAndDepleteAdjacentThresholded(livescene::Image &foreZtoDeplete, const signed int &thresholdZ, 
+		const unsigned int &X, const unsigned int &Y, const short &Z,
+		float &weightedX, float &weightedY, float &weightedZ);
+	// called by sampleAndDepleteAdjacentThresholded to process one cell and its neighbors
+	void BodyMass::sampleAndDepleteOneCell(livescene::Image &foreZtoDeplete, CoordStack &searchStack,
+		const unsigned int &X, const unsigned int &Y,
+		const signed int &thresholdZ, const signed int &maxZ,
+		float &runningX, float &runningY, float &runningZ, float &runningWeight);
+	void addToCoordStack(const livescene::Image &foreZtoDeplete, CoordStack &stack, const signed int &thresholdZ, const unsigned int &X, const unsigned int &Y);
 	bool _bodyPresent;
 	float _centroid[3], // x,y,z
 		_stdDev[3];  // x,y,z

@@ -90,10 +90,9 @@ unsigned int HandsDetected(0);
 // aka half of the body mass height
 // These outlying search ratios are used to determine how far around/above the nominal body
 // mass should be searched for extended hands.
-const float outlyingSearchRatioM(2.2f), // 2.2 times M distance to either side of body centroid
-			outlyingSearchRatioN(1.5f); // 1.5 times N above centroid is an additional half of N distance above top of head
-
-bool keepSearching(true);
+const float outlyingSearchRatioM(2.2f * 2.0f), // 2.2 times M distance to either side of body centroid
+			outlyingSearchRatioN(1.5f * 2.0f), // 1.5 times N above centroid is an additional half of N distance above top of head
+			outlyingSearchRatioO(0.5f * 2.0f); // .5 times N below centroid allows hands to extend just below the belt
 
 if(!getBodyPresent()) return(0); // need to know where the body is to start detecting hands
 
@@ -102,7 +101,7 @@ const signed int
 	bodySearchMinX(getBodyCentroid(0)[0] - (getBodyHalfExtent(0)[0] * outlyingSearchRatioM)),
 	bodySearchMaxX(getBodyCentroid(0)[0] + (getBodyHalfExtent(0)[0] * outlyingSearchRatioM)),
 	bodySearchMinY(getBodyCentroid(0)[1] - (getBodyHalfExtent(0)[1] * outlyingSearchRatioN)),
-	bodySearchMaxY(getBodyCentroid(0)[1]),
+	bodySearchMaxY(getBodyCentroid(0)[1] + (getBodyHalfExtent(0)[1] * outlyingSearchRatioO)),
 	bodyThresholdZ(getBodyCentroid(0)[2] - (getBodyHalfExtent(0)[2] * 2.5)); // anything nearer than body front Z margin qualifies
 
 // clamp to image edge bounds
@@ -113,22 +112,29 @@ const signed int
 	bodySearchMaxYClamped(std::min(bodySearchMaxY, (signed)foreZ.getHeight())),
 	bodyThresholdZClamped(std::max(bodyThresholdZ, 0));
 
-while(keepSearching)
+// make an expendible copy of the foreground buffer
+livescene::Image foreZtoDeplete(foreZ);
+
+for(unsigned int handSearch = 0; handSearch < 2; handSearch++)
 {
 	unsigned int resultX(0), resultY(0), resultZ(0);
-	// search body region for nearest Z point closer than body front
-	if(findMinimumZLocation(foreZ, bodySearchMinXClamped, bodySearchMinYClamped,
+	// search body region for nearest remaining Z point closer than body front
+	if(findMinimumZLocation(foreZtoDeplete, bodySearchMinXClamped, bodySearchMinYClamped,
 		bodySearchMaxXClamped, bodySearchMaxYClamped, bodyThresholdZClamped, resultX, resultY, resultZ))
 	{
-		_handCentroid[0][0] = resultX;
-		_handCentroid[0][1] = resultY;
-		_handCentroid[0][2] = resultZ;
-
-		// <<<>>> do some better filtering, and wipe out the hand data so a second hand can be searched for
-		HandsDetected = 1;
+		// ensure there's at least a little bit of range between resultZ and bodyThresholdZClamped
+		// avoids divide-by-zero and poor weighting later
+		if((signed)resultZ < bodyThresholdZClamped + 2)
+		{
+			static int count;
+			if(sampleAndDepleteAdjacentThresholded(foreZtoDeplete, bodyThresholdZClamped,
+				resultX, resultY, resultZ, _handCentroid[handSearch][0], _handCentroid[handSearch][1], _handCentroid[handSearch][2]))
+			{
+				++HandsDetected;
+			} // if
+		} // if
 	} // if
-	break;
-} // while
+} // for
 
 return(HandsDetected);
 } // BodyMass::detectHands
@@ -170,6 +176,103 @@ bool BodyMass::findMinimumZLocation(const livescene::Image &foreZ,
 
 	return(thresholdFound);
 } // BodyMass::findMinimumZLocation
+
+bool BodyMass::sampleAndDepleteAdjacentThresholded(livescene::Image &foreZtoDeplete, const signed int &thresholdZ, 
+									const unsigned int &X, const unsigned int &Y, const short &Z,
+									float &weightedX, float &weightedY, float &weightedZ)
+{
+
+	bool result(false);
+	CoordStack searchStack;
+	float runningX(0.0f), runningY(0.0f), runningZ(0.0f), runningWeight(0.0f);
+	short minDistance(std::numeric_limits<short>::max());
+	unsigned int width(foreZtoDeplete.getWidth()), height(foreZtoDeplete.getHeight());
+	short *depthBuffer = (short *)foreZtoDeplete.getData();
+
+	// seed the sampling/depletion recursive search
+	addToCoordStack(foreZtoDeplete, searchStack, thresholdZ, X, Y);
+
+	while(!searchStack.empty())
+	{
+		UIntPair currentElement = searchStack.top(); // get next element for processing
+		searchStack.pop(); // remove it from stack before processing it
+		// process this cell and add any neighbors that need processing
+		sampleAndDepleteOneCell(foreZtoDeplete, searchStack,
+			currentElement.first, currentElement.second, 
+			thresholdZ, Z,
+			runningX, runningY, runningZ, runningWeight);
+	} // while
+
+	// normalize by runningWeight
+	if(runningWeight > 0.0f)
+	{
+		float runningWeightInv = (1.0f / runningWeight);
+		// multiply by inverse is faster
+		weightedX = runningX * runningWeightInv;
+		weightedY = runningY * runningWeightInv;
+		weightedZ = runningZ * runningWeightInv;
+		result = true; // success
+	} // if
+
+	return(result);
+} // BodyMass::sampleAndDepleteAdjacentThresholded
+
+void BodyMass::sampleAndDepleteOneCell(livescene::Image &foreZtoDeplete, CoordStack &searchStack,
+									   const unsigned int &X, const unsigned int &Y, 
+									   const signed int &thresholdZ, const signed int &maxZ,
+									   float &runningX, float &runningY, float &runningZ, float &runningWeight)
+{
+	short *depthBuffer = (short *)foreZtoDeplete.getData();
+	short originalDepth = depthBuffer[Y * foreZtoDeplete.getWidth() + X];
+
+	if(!(foreZtoDeplete.isCellValueValid(originalDepth) && originalDepth < thresholdZ))
+		return; // TODO <<<>>> shouldn't be needed! this is checked before adding to the stack, right?
+
+	// calculate weight of this sample
+	// samples nearer to the maxZ (the most-extended part of the limb) get more
+	// weight, samples near the threshold plane get much less.
+	// weight ranges from 0...1, and is squared
+	float weight = (1.0f - (float)(originalDepth - maxZ) / (float)(thresholdZ - maxZ));
+	weight *= weight; // give it squared power, not linear
+	// add the sample to the accumulator, scaled by its weight
+	runningX += (X * weight);
+	runningY += (Y * weight);
+	runningZ += (originalDepth * weight);
+	// add the weight to the running total for later normalization
+	runningWeight += weight;
+
+	// obliterate this cell so it won't be re-processed
+	depthBuffer[Y * foreZtoDeplete.getWidth() + X] = foreZtoDeplete.getNull();
+
+	// now, flag any valid neighbors for processing
+	const int spreadMargin(10);
+
+	for(int xNeighbor = -spreadMargin; xNeighbor <= spreadMargin; xNeighbor++)
+	{
+		for(int yNeighbor = -spreadMargin; yNeighbor <= spreadMargin; yNeighbor++)
+		{
+			const int currentNeighborX(X + xNeighbor), currentNeighborY(Y + yNeighbor);
+			if(currentNeighborX > 0 && currentNeighborX < (signed)foreZtoDeplete.getWidth()
+				&& currentNeighborY > 0 && currentNeighborY < (signed)foreZtoDeplete.getHeight())
+			{
+				addToCoordStack(foreZtoDeplete, searchStack, thresholdZ, currentNeighborX, currentNeighborY);
+			} // if
+		} // for
+	} // for
+
+
+} // BodyMass::sampleAndDepleteOneCell
+
+
+void BodyMass::addToCoordStack(const livescene::Image &foreZtoDeplete, CoordStack &stack, const signed int &thresholdZ, const unsigned int &X, const unsigned int &Y)
+{
+	short *depthBuffer = (short *)foreZtoDeplete.getData();
+	short originalDepth = depthBuffer[Y * foreZtoDeplete.getWidth() + X];
+	if(foreZtoDeplete.isCellValueValid(originalDepth) && originalDepth < thresholdZ)
+	{
+		stack.push(UIntPair(X, Y));
+	} // if
+} // BodyMass::addToCoordStack
 
 
 // namespace livescene

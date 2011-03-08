@@ -382,6 +382,7 @@ int main()
 			} // oneshot
 
 			livescene::BodyMass detectedBodies;
+			int numHands(0);
 			bodyBoundsPAT->setNodeMask(0); // start by hiding body bounds in case we don't find any bodies
 			handZeroPAT->setNodeMask(0); // hide hand zero
 			handOnePAT->setNodeMask(0); // hide hand one
@@ -389,17 +390,21 @@ int main()
 			{ // foreground detected
 				if(detectedBodies.detect(foreZ)) // try to detect bodies
 				{
-					const int numHands = detectedBodies.detectHands(foreZ); // try to detect hands
+					numHands = detectedBodies.detectHands(foreZ); // try to detect hands
 					bodyBoundsPAT->setNodeMask(~0); // make the body bounds box visible
 					if(numHands) handZeroPAT->setNodeMask(~0); // show hand zero
 					if(numHands > 1) handOnePAT->setNodeMask(~0); // show hand one
 
 					// update the body mass bounds
-					osg::Vec3 worldBodyMean(livescene::transformPointOSG(d2w, detectedBodies.getBodyCentroid(0)[0], detectedBodies.getBodyCentroid(0)[1], detectedBodies.getBodyCentroid(0)[2]));
+					osg::Vec3 worldBodyMean(livescene::transformPointOSG(d2w,
+						detectedBodies.getBodyCentroid(0)[0], detectedBodies.getBodyCentroid(0)[1], detectedBodies.getBodyCentroid(0)[2]));
 					osg::Vec3 worldBodyXStdDev, worldBodyYStdDev, worldBodyZStdDev;
-					worldBodyXStdDev = livescene::transformPointOSG(d2w, detectedBodies.getBodyCentroid(0)[0] + detectedBodies.getBodyHalfExtent(0)[0], detectedBodies.getBodyCentroid(0)[1], detectedBodies.getBodyCentroid(0)[2]);
-					worldBodyYStdDev = livescene::transformPointOSG(d2w, detectedBodies.getBodyCentroid(0)[0], detectedBodies.getBodyCentroid(0)[1] + detectedBodies.getBodyHalfExtent(0)[1], detectedBodies.getBodyCentroid(0)[2]);
-					worldBodyZStdDev = livescene::transformPointOSG(d2w, detectedBodies.getBodyCentroid(0)[0], detectedBodies.getBodyCentroid(0)[1], detectedBodies.getBodyCentroid(0)[2] + detectedBodies.getBodyHalfExtent(0)[2]);
+					worldBodyXStdDev = livescene::transformPointOSG(d2w,
+						detectedBodies.getBodyCentroid(0)[0] + detectedBodies.getBodyHalfExtent(0)[0], detectedBodies.getBodyCentroid(0)[1], detectedBodies.getBodyCentroid(0)[2]);
+					worldBodyYStdDev = livescene::transformPointOSG(d2w,
+						detectedBodies.getBodyCentroid(0)[0], detectedBodies.getBodyCentroid(0)[1] + detectedBodies.getBodyHalfExtent(0)[1], detectedBodies.getBodyCentroid(0)[2]);
+					worldBodyZStdDev = livescene::transformPointOSG(d2w,
+						detectedBodies.getBodyCentroid(0)[0], detectedBodies.getBodyCentroid(0)[1], detectedBodies.getBodyCentroid(0)[2] + detectedBodies.getBodyHalfExtent(0)[2]);
 
 					// because we only see the front half of objects, their mass is baised forward 1/2 in Z
 					// To compensate, we can average their position half/half with the worldBodyZStdDev, which
@@ -417,7 +422,7 @@ int main()
 						{
 							osg::Vec3 worldHandOne(livescene::transformPointOSG(d2w,
 								detectedBodies.getHandCentroid(0, 1)[0], detectedBodies.getHandCentroid(0, 1)[1], detectedBodies.getHandCentroid(0, 1)[2]));
-							handZeroPAT->setPosition(worldHandOne);
+							handOnePAT->setPosition(worldHandOne);
 						} // if
 					} // if
 
@@ -434,7 +439,24 @@ int main()
 
 			if(noForeground) fgInfoStr = "foreground not detected"; else fgInfoStr = "* FOREGROUND DETECTED *";
 			if(backgroundEstablished < OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES) fgInfoStr = "Establishing Background";
-			if(detectedBodies.getBodyPresent()) fgInfoStr = "** BODY DETECTED **";
+			if(detectedBodies.getBodyPresent())
+			{
+				if(numHands)
+				{
+					if(numHands > 1)
+					{
+						fgInfoStr = "** BODY AND HANDS DETECTED **";
+					} // if
+					else
+					{
+						fgInfoStr = "** BODY AND HAND DETECTED **";
+					} // else
+				} // if
+				else
+				{
+					fgInfoStr = "** BODY DETECTED **";
+				} // else
+			} // if
 			textHUD.setf(std::ios::fixed,std::ios::floatfield);
 			textHUD << std::setprecision(0) << ". " << std::endl << // blank line leaves room for framerate counter
 				"Frame: " << frameCount << std::endl <<
