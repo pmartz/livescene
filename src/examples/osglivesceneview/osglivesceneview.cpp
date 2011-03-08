@@ -51,20 +51,32 @@ osg::ref_ptr<osg::Projection> screenProjection;
 osg::ref_ptr<osg::MatrixTransform> screenMatrixTransform;
 osg::ref_ptr<osgText::Text> textEntity;
 
-osg::ref_ptr<osg::Geode>foreGroundMarker;
-osg::ref_ptr<osg::PositionAttitudeTransform>fgMarkerPAT;
+osg::ref_ptr<osg::PositionAttitudeTransform>bodyBoundsPAT, handZeroPAT, handOnePAT;
 
 // some strings that get formatted together to make the HUD metadata
 std::string fgInfoStr, minDepth, maxDepth;
 
-void buildMarker(void)
+void buildBodyIndicators(void)
 {
-	foreGroundMarker = new osg::Geode;
-	fgMarkerPAT = new osg::PositionAttitudeTransform;
-	//foreGroundMarker->addDrawable(osgwTools::makeWireAltAzSphere( 4.0, 16, 32 ));
-	foreGroundMarker->addDrawable(osgwTools::makeWireBox( osg::Vec3(1.0, 1.0, 1.0)));
-	fgMarkerPAT->addChild(foreGroundMarker);
-} // buildMarker
+	osg::ref_ptr<osg::Geode>bodyBounds, handZero, handOne;
+
+	// body
+	bodyBounds = new osg::Geode;
+	bodyBoundsPAT = new osg::PositionAttitudeTransform;
+	bodyBounds->addDrawable(osgwTools::makeWireBox( osg::Vec3(1.0, 1.0, 1.0)));
+	bodyBoundsPAT->addChild(bodyBounds);
+
+	// hands
+	handZero = new osg::Geode;
+	handOne = new osg::Geode;
+	handZeroPAT = new osg::PositionAttitudeTransform;
+	handOnePAT = new osg::PositionAttitudeTransform;
+	handZero->addDrawable(osgwTools::makeWireAltAzSphere( 0.015, 8, 16 )); // could these two be merged?
+	handOne->addDrawable(osgwTools::makeWireAltAzSphere( 0.015, 8, 16 )); // could these two be merged?
+	handZeroPAT->addChild(handZero);
+	handOnePAT->addChild(handZero);
+
+} // buildBodyIndicators
 
 void buildHUD(void)
 {
@@ -207,10 +219,14 @@ int main()
 	buildHUD();
 	sceneTopTransform->addChild(screenElementsGroup.get());
 
-	// add marker
-	buildMarker();
-	sceneTopTransform->addChild(fgMarkerPAT.get());
-	fgMarkerPAT->setNodeMask(0); // hide it initially
+	// add body indicators
+	buildBodyIndicators();
+	sceneTopTransform->addChild(bodyBoundsPAT.get());
+	bodyBoundsPAT->setNodeMask(0); // hide body initially
+	sceneTopTransform->addChild(handZeroPAT.get());
+	handZeroPAT->setNodeMask(0); // hide hand zero initially
+	sceneTopTransform->addChild(handOnePAT.get());
+	handOnePAT->setNodeMask(0); // hide hand one initially
 
 	// set scene data
 	viewer.setSceneData( sceneTopTransform.get() );
@@ -366,31 +382,50 @@ int main()
 			} // oneshot
 
 			livescene::BodyMass detectedBodies;
-			fgMarkerPAT->setNodeMask(0); // start by hiding body bounds in case we don't find any bodies
+			bodyBoundsPAT->setNodeMask(0); // start by hiding body bounds in case we don't find any bodies
+			handZeroPAT->setNodeMask(0); // hide hand zero
+			handOnePAT->setNodeMask(0); // hide hand one
 			if(!noForeground)
 			{ // foreground detected
 				if(detectedBodies.detect(foreZ)) // try to detect bodies
 				{
-					fgMarkerPAT->setNodeMask(~0); // make the body bounds box visible
+					const int numHands = detectedBodies.detectHands(foreZ); // try to detect hands
+					bodyBoundsPAT->setNodeMask(~0); // make the body bounds box visible
+					if(numHands) handZeroPAT->setNodeMask(~0); // show hand zero
+					if(numHands > 1) handOnePAT->setNodeMask(~0); // show hand one
 
-					// update the body mass marker
-					osg::Vec3 worldBodyMean(livescene::transformPointOSG(d2w, (detectedBodies.getCentroid(0))[0], (detectedBodies.getCentroid(0))[1], (detectedBodies.getCentroid(0))[2]));
+					// update the body mass bounds
+					osg::Vec3 worldBodyMean(livescene::transformPointOSG(d2w, detectedBodies.getBodyCentroid(0)[0], detectedBodies.getBodyCentroid(0)[1], detectedBodies.getBodyCentroid(0)[2]));
 					osg::Vec3 worldBodyXStdDev, worldBodyYStdDev, worldBodyZStdDev;
-					worldBodyXStdDev = livescene::transformPointOSG(d2w, (detectedBodies.getCentroid(0))[0] + (detectedBodies.getExtent(0))[0], (detectedBodies.getCentroid(0))[1], (detectedBodies.getCentroid(0))[2]);
-					worldBodyYStdDev = livescene::transformPointOSG(d2w, (detectedBodies.getCentroid(0))[0], (detectedBodies.getCentroid(0))[1] + (detectedBodies.getExtent(0))[1], (detectedBodies.getCentroid(0))[2]);
-					worldBodyZStdDev = livescene::transformPointOSG(d2w, (detectedBodies.getCentroid(0))[0], (detectedBodies.getCentroid(0))[1], (detectedBodies.getCentroid(0))[2] + (detectedBodies.getExtent(0))[2]);
+					worldBodyXStdDev = livescene::transformPointOSG(d2w, detectedBodies.getBodyCentroid(0)[0] + detectedBodies.getBodyHalfExtent(0)[0], detectedBodies.getBodyCentroid(0)[1], detectedBodies.getBodyCentroid(0)[2]);
+					worldBodyYStdDev = livescene::transformPointOSG(d2w, detectedBodies.getBodyCentroid(0)[0], detectedBodies.getBodyCentroid(0)[1] + detectedBodies.getBodyHalfExtent(0)[1], detectedBodies.getBodyCentroid(0)[2]);
+					worldBodyZStdDev = livescene::transformPointOSG(d2w, detectedBodies.getBodyCentroid(0)[0], detectedBodies.getBodyCentroid(0)[1], detectedBodies.getBodyCentroid(0)[2] + detectedBodies.getBodyHalfExtent(0)[2]);
 
 					// because we only see the front half of objects, their mass is baised forward 1/2 in Z
 					// To compensate, we can average their position half/half with the worldBodyZStdDev, which
 					// re-biases it backwards to where it ought to be
-					//fgMarkerPAT->setPosition((worldBodyMean + worldBodyZStdDev) * 0.5);
-					fgMarkerPAT->setPosition(worldBodyMean);
+					//bodyBoundsPAT->setPosition((worldBodyMean + worldBodyZStdDev) * 0.5);
+					bodyBoundsPAT->setPosition(worldBodyMean);
+
+					// update hands
+					if(numHands)
+					{
+						osg::Vec3 worldHandZero(livescene::transformPointOSG(d2w,
+							detectedBodies.getHandCentroid(0, 0)[0], detectedBodies.getHandCentroid(0, 0)[1], detectedBodies.getHandCentroid(0, 0)[2]));
+						handZeroPAT->setPosition(worldHandZero);
+						if(numHands > 1)
+						{
+							osg::Vec3 worldHandOne(livescene::transformPointOSG(d2w,
+								detectedBodies.getHandCentroid(0, 1)[0], detectedBodies.getHandCentroid(0, 1)[1], detectedBodies.getHandCentroid(0, 1)[2]));
+							handZeroPAT->setPosition(worldHandOne);
+						} // if
+					} // if
 
 					const float
 						worldBoxXScale(2.0f * (worldBodyXStdDev - worldBodyMean).x()), // multiply by two, since stddev is sort of a radius-like, on one side of mean
 						worldBoxYScale(2.0f * (worldBodyYStdDev - worldBodyMean).y()), // multiply by two, since stddev is sort of a radius-like, on one side of mean
 						worldBoxZScale(2.0f * (worldBodyZStdDev - worldBodyMean).z()); // multiply by two, since stddev is sort of a radius-like, on one side of mean
-					fgMarkerPAT->setScale(osg::Vec3(worldBoxXScale, worldBoxYScale, worldBoxZScale));
+					bodyBoundsPAT->setScale(osg::Vec3(worldBoxXScale, worldBoxYScale, worldBoxZScale));
 				} // if
 			} // if
 			
@@ -409,16 +444,10 @@ int main()
 				"FzMin: " << foreZ.getInternalStatsZ().getMin() << std::endl <<
 				"FzMed: " << foreZ.getInternalStatsZ().getMidVal() << std::endl <<
 				"FzMax: " << foreZ.getInternalStatsZ().getMax() << std::endl <<
-				"FzMN: " << foreZ.getInternalStatsZ().getMean() << std::endl <<
-				"FzSD: " << foreZ.getInternalStatsZ().getStdDev() << std::endl <<
-				"FxMN: " << foreZ.getInternalStatsX().getMean() << std::endl <<
-				"FxSD: " << foreZ.getInternalStatsX().getStdDev() << std::endl <<
-				"FyMN: " << foreZ.getInternalStatsY().getMean() << std::endl <<
-				"FySD: " << foreZ.getInternalStatsY().getStdDev() << std::endl <<
 
-				"BzSD: " << (detectedBodies.getExtent(0))[2] << std::endl <<
-				"BxSD: " << (detectedBodies.getExtent(0))[0] << std::endl <<
-				"BySD: " << (detectedBodies.getExtent(0))[1];
+				"BzSD: " << (detectedBodies.getBodyHalfExtent(0))[2] << std::endl <<
+				"BxSD: " << (detectedBodies.getBodyHalfExtent(0))[0] << std::endl <<
+				"BySD: " << (detectedBodies.getBodyHalfExtent(0))[1];
 				
 				textEntity->setText(textHUD.str());
 
