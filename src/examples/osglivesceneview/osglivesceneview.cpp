@@ -9,6 +9,7 @@
 #include <liblivescene/Detect.h>
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 
 #ifdef OSGWORKS_FOUND
 #  include <osgwTools/Shapes.h>
