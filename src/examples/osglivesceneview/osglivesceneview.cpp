@@ -119,17 +119,6 @@ void buildHUD(void)
 
 } // buildHUD
 
-bool isCommandArg( int argc, char** argv, const std::string& argument )
-{
-    if( argc < 2 ) return( false );
-    int idx;
-    for( idx=1; idx<argc; idx++ )
-    {
-        if( argument == std::string( argv[ idx ] ) )
-            return( true );
-    }
-    return( false );
-}
 
 int main( int argc, char** argv )
 {
@@ -140,8 +129,22 @@ int main( int argc, char** argv )
 #endif
 
 
-    // Argument parsing. Can convert this to use OSG ArgumentParser if desired.
-    textureForeground = isCommandArg( argc, argv, "-f" );
+    // Argument parsing.
+    osg::ArgumentParser arguments( &argc, argv );
+
+    osg::notify( osg::ALWAYS ) << "-nopm\tDisables PolygonsMode (default is true)." << std::endl;
+    osg::notify( osg::ALWAYS ) << "-noib\tDisables IsolateBackground (default in true)." << std::endl;
+    osg::notify( osg::ALWAYS ) << "-sb\tEnables ShowBackground (default is false)." << std::endl;
+    osg::notify( osg::ALWAYS ) << "-tf\tEnables textureForeground (default is false)." << std::endl;
+    osg::notify( osg::ALWAYS ) << "-notb\tDisables textureBackground (default is true)." << std::endl;
+    osg::notify( osg::ALWAYS ) << "-nodab\tDisables dynamicAccumulateBackground (default is true)." << std::endl;
+    PolygonsMode = arguments.find( "-nopm" ) < 0;
+    IsolateBackground = arguments.find( "-noib" ) < 0;
+    ShowBackground = arguments.find( "-sb" ) > 0;
+    textureForeground = arguments.find( "-tf" ) > 0;
+    textureBackground = arguments.find( "-notb" ) < 0;
+    dynamicAccumulateBackground = arguments.find( "-nodab" ) < 0;
+
 
 	osg::Vec4 foreColor(0.0, 0.7, 1.0, 1.0), backColor(1.0, 1.0, 1.0, 1.0);
     const int nominalFrameD( 1024 ); // <<<>>> these should be made dynamic
