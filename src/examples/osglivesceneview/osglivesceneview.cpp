@@ -119,17 +119,33 @@ void buildHUD(void)
 
 } // buildHUD
 
-int main()
+bool isCommandArg( int argc, char** argv, const std::string& argument )
 {
-	osg::Vec4 foreColor(0.0, 0.7, 1.0, 1.0), backColor(1.0, 1.0, 1.0, 1.0);
-    const int nominalFrameD( 1024 ); // <<<>>> these should be made dynamic
-    osg::Matrix d2w = livescene::makeDeviceToWorldMatrixOSG( NominalFrameW, NominalFrameH, nominalFrameD /*, TBD Device device */ );
+    if( argc < 2 ) return( false );
+    int idx;
+    for( idx=1; idx<argc; idx++ )
+    {
+        if( argument == std::string( argv[ idx ] ) )
+            return( true );
+    }
+    return( false );
+}
 
+int main( int argc, char** argv )
+{
 	std::cout << livescene::getVersionString() << std::endl;
 
 #ifdef OSGWORKS_FOUND
     std::cout << osgwTools::getVersionString() << std::endl;
 #endif
+
+
+    // Argument parsing. Can convert this to use OSG ArgumentParser if desired.
+    textureForeground = isCommandArg( argc, argv, "-f" );
+
+	osg::Vec4 foreColor(0.0, 0.7, 1.0, 1.0), backColor(1.0, 1.0, 1.0, 1.0);
+    const int nominalFrameD( 1024 ); // <<<>>> these should be made dynamic
+    osg::Matrix d2w = livescene::makeDeviceToWorldMatrixOSG( NominalFrameW, NominalFrameH, nominalFrameD /*, TBD Device device */ );
 
 
 	livescene::DeviceManager *deviceManager = new livescene::DeviceManager();
