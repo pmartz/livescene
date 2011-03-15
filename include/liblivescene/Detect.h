@@ -14,6 +14,7 @@
 namespace livescene {
 
 const int OSG_LIVESCENEVIEW_DETECT_BODY_SAMPLES(13000); // fewer than this many foreground samples in a frame are presumed to be less than a single body
+const int OSG_LIVESCENEVIEW_DETECT_MAX_STACK(10000); // do not accumulate more samples than this in the detection stack
 
 /** \defgroup Detect Object Detection
 */

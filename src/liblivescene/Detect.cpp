@@ -263,14 +263,16 @@ void BodyMass::sampleAndDepleteOneCell(livescene::Image &foreZtoDeplete, CoordSt
 
 } // BodyMass::sampleAndDepleteOneCell
 
-
 void BodyMass::addToCoordStack(const livescene::Image &foreZtoDeplete, CoordStack &stack, const signed int &thresholdZ, const unsigned int &X, const unsigned int &Y)
 {
 	short *depthBuffer = (short *)foreZtoDeplete.getData();
 	short originalDepth = depthBuffer[Y * foreZtoDeplete.getWidth() + X];
 	if(foreZtoDeplete.isCellValueValid(originalDepth) && originalDepth < thresholdZ)
 	{
-		stack.push(UIntPair(X, Y));
+		if(stack.size() < OSG_LIVESCENEVIEW_DETECT_MAX_STACK)
+		{
+			stack.push(UIntPair(X, Y));
+		} // if
 	} // if
 } // BodyMass::addToCoordStack
 
