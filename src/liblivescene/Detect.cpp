@@ -3,6 +3,7 @@
 #include "liblivescene/Detect.h"
 #include <algorithm> // std::min/max
 #include <limits> // numeric_limits::max
+#include <cassert>
 
 namespace livescene {
 
@@ -43,8 +44,8 @@ const signed int // std::min and max get angry if the type of the two args is no
 const signed int
 	xminIntClamped(std::max(xminIntSigned, 0)),
 	yminIntClamped(std::max(yminIntSigned, 0)),
-	xmaxIntClamped(std::min(xmaxIntSigned, (signed)foreZ.getWidth())),
-	ymaxIntClamped(std::min(ymaxIntSigned, (signed)foreZ.getHeight()));
+	xmaxIntClamped(std::min(xmaxIntSigned, (signed)foreZ.getWidth() - 1)),
+	ymaxIntClamped(std::min(ymaxIntSigned, (signed)foreZ.getHeight() - 1));
 BoxApproveCallback stdDevBoxApprove(osg::BoundingBox(
 	xmin, // xmin
 	ymin, // ymin
@@ -53,6 +54,16 @@ BoxApproveCallback stdDevBoxApprove(osg::BoundingBox(
 	ymax, // ymax
 	zmax // zmax
 	));
+
+// troubleshooting asserts, remove later
+assert(xminIntClamped >= 0);
+assert(yminIntClamped >= 0);
+assert(xmaxIntClamped >= 0);
+assert(ymaxIntClamped >= 0);
+assert(xminIntClamped < (signed)foreZ.getWidth());
+assert(yminIntClamped < (signed)foreZ.getHeight());
+assert(xmaxIntClamped < (signed)foreZ.getWidth());
+assert(ymaxIntClamped < (signed)foreZ.getHeight());
 
 // find the actual body mass using filtered input
 // this is faster by passing the XY bounding box as a limiter
@@ -189,13 +200,15 @@ bool BodyMass::sampleAndDepleteAdjacentThresholded(livescene::Image &foreZtoDepl
 	unsigned int width(foreZtoDeplete.getWidth()), height(foreZtoDeplete.getHeight());
 	short *depthBuffer = (short *)foreZtoDeplete.getData();
 
+	searchStack.reserve(OSG_LIVESCENEVIEW_DETECT_MAX_STACK + 1); // try pre-reserving
+
 	// seed the sampling/depletion recursive search
 	addToCoordStack(foreZtoDeplete, searchStack, thresholdZ, X, Y);
 
 	while(!searchStack.empty())
 	{
-		UIntPair currentElement = searchStack.top(); // get next element for processing
-		searchStack.pop(); // remove it from stack before processing it
+		UIntPair currentElement = searchStack[searchStack.size() - 1]; // get next element for processing
+		searchStack.pop_back(); // remove it from stack before processing it
 		// process this cell and add any neighbors that need processing
 		sampleAndDepleteOneCell(foreZtoDeplete, searchStack,
 			currentElement.first, currentElement.second, 
@@ -271,7 +284,7 @@ void BodyMass::addToCoordStack(const livescene::Image &foreZtoDeplete, CoordStac
 	{
 		if(stack.size() < OSG_LIVESCENEVIEW_DETECT_MAX_STACK)
 		{
-			stack.push(UIntPair(X, Y));
+			stack.push_back(UIntPair(X, Y));
 		} // if
 	} // if
 } // BodyMass::addToCoordStack

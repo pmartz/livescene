@@ -3,7 +3,7 @@
 #ifndef __LIVESCENE_DETECT_H__
 #define __LIVESCENE_DETECT_H__ 1
 
-#include <stack>
+#include <vector>
 #include <utility>
 #include "liblivescene/Export.h"
 #include "liblivescene/Image.h"
@@ -41,7 +41,7 @@ private:
 /** \brief Pair of coordinates, used in CoordStack */
 typedef std::pair<unsigned int, unsigned int> UIntPair;
 /** \brief Stack of coordinate pairs, used internally by sampleAndDepleteAdjacentThresholded(). */
-typedef std::stack<UIntPair> CoordStack;
+typedef std::vector<UIntPair> CoordStack;
 
 
 /** \brief Detect body mass(es)
