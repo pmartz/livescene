@@ -133,7 +133,7 @@ int main( int argc, char** argv )
     osg::ArgumentParser arguments( &argc, argv );
 
     osg::notify( osg::ALWAYS ) << "-nopm\tDisables PolygonsMode (default is true)." << std::endl;
-    osg::notify( osg::ALWAYS ) << "-noib\tDisables IsolateBackground (default in true)." << std::endl;
+    osg::notify( osg::ALWAYS ) << "-noib\tDisables IsolateBackground (default is true)." << std::endl;
     osg::notify( osg::ALWAYS ) << "-sb\tEnables ShowBackground (default is false)." << std::endl;
     osg::notify( osg::ALWAYS ) << "-tf\tEnables textureForeground (default is false)." << std::endl;
     osg::notify( osg::ALWAYS ) << "-notb\tDisables textureBackground (default is true)." << std::endl;
