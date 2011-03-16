@@ -37,7 +37,8 @@ IsolateBackground(true),
 ShowBackground(false),
 textureForeground(false),
 textureBackground(true),
-dynamicAccumulateBackground(true); // this option takes "empty" frames and merges them with the background. It costs about 1fps.
+dynamicAccumulateBackground(true), // this option takes "empty" frames and merges them with the background. It costs about 1fps.
+depth10bit(true);
 
 
 static const int NominalFrameW = 640, NominalFrameH = 480; // <<<>>> these should be made dynamic
@@ -138,12 +139,14 @@ int main( int argc, char** argv )
     osg::notify( osg::ALWAYS ) << "-tf\tEnables textureForeground (default is false)." << std::endl;
     osg::notify( osg::ALWAYS ) << "-notb\tDisables textureBackground (default is true)." << std::endl;
     osg::notify( osg::ALWAYS ) << "-nodab\tDisables dynamicAccumulateBackground (default is true)." << std::endl;
+    osg::notify( osg::ALWAYS ) << "-depth11bit\tEnables 11bit depth (default is 10bit)." << std::endl;
     PolygonsMode = arguments.find( "-nopm" ) < 0;
     IsolateBackground = arguments.find( "-noib" ) < 0;
     ShowBackground = arguments.find( "-sb" ) > 0;
     textureForeground = arguments.find( "-tf" ) > 0;
     textureBackground = arguments.find( "-notb" ) < 0;
     dynamicAccumulateBackground = arguments.find( "-nodab" ) < 0;
+    depth10bit = arguments.find( "-depth11bit" ) < 0;
 
 
 	osg::Vec4 foreColor(0.0, 0.7, 1.0, 1.0), backColor(1.0, 1.0, 1.0, 1.0);
@@ -261,8 +264,11 @@ int main( int argc, char** argv )
     {
 		bool goodRGB(false), goodZ(false), noForeground(false);
 	livescene::Image imageRGB(NominalFrameW, NominalFrameH, 3, livescene::VIDEO_RGB);
-	livescene::Image imageZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT);
-	livescene::Image foreZ(NominalFrameW, NominalFrameH, 2, livescene::DEPTH_10BIT); // only the foreground
+    livescene::VideoFormat depth = livescene::DEPTH_10BIT;
+    if(!depth10bit)
+      depth = livescene::DEPTH_11BIT;
+    livescene::Image imageZ(NominalFrameW, NominalFrameH, 2, depth);
+    livescene::Image foreZ(NominalFrameW, NominalFrameH, 2, depth); // only the foreground
 		unsigned int numFiltered(0);
 
 		if(ImageCapabilitiesRGB)
