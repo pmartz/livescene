@@ -27,8 +27,11 @@ http://forum.openscenegraph.org/viewtopic.php?t=7702
 class UserInteraction
 {
 public:
-    LIVESCENE_EXPORT UserInteraction( osgViewer::GraphicsWindow& window );
+    LIVESCENE_EXPORT UserInteraction( osgViewer::GraphicsWindow* window=NULL );
     LIVESCENE_EXPORT ~UserInteraction();
+
+    LIVESCENE_EXPORT void setGraphicsWindow( osgViewer::GraphicsWindow* window ) { _window = window; }
+    LIVESCENE_EXPORT osgViewer::GraphicsWindow* getGraphicsWindow() { return( _window ); }
 
     /** \brief Detects interactors and sends them as events.
     Apps call this once per frame to generate events from image data.
@@ -167,11 +170,9 @@ public:
 
     LIVESCENE_EXPORT void transformMouse( float& x, float& y, unsigned short devX, unsigned short devY );
 
-    LIVESCENE_EXPORT osgViewer::GraphicsWindow& getGraphicsWindow() { return( _window ); }
-
 protected:
     InteractorContainer _interactors;
-    osgViewer::GraphicsWindow& _window;
+    osgViewer::GraphicsWindow* _window;
 
     osg::ref_ptr< DetectionCallback > _detectionCallback;
     osg::ref_ptr< SendEventsCallback > _sendEventsCallback;

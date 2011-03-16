@@ -172,7 +172,7 @@ int main()
     viewer.realize();
     osgViewer::ViewerBase::Windows windows;
     viewer.getWindows( windows );
-    livescene::UserInteraction ui( *( windows[ 0 ] ) );
+    livescene::UserInteraction ui( windows[ 0 ] );
 
     while( !viewer.done() )
     {

@@ -14,7 +14,7 @@
 namespace livescene {
 
 
-UserInteraction::UserInteraction( osgViewer::GraphicsWindow& window )
+UserInteraction::UserInteraction( osgViewer::GraphicsWindow* window )
   : _window( window ),
     _defaultDetectionThreshold( 700 ),
     _defaultActiveThreshold( 500 ),
@@ -129,7 +129,7 @@ void UserInteraction::defaultDetection( InteractorContainer& interactors, const 
 
 void UserInteraction::defaultSendEvents( InteractorContainer& lastInteractors, InteractorContainer& newInteractors )
 {
-    osgGA::EventQueue* eq = _window.getEventQueue();
+    osgGA::EventQueue* eq = _window->getEventQueue();
 
     // Make a local copy of the const set of last Interactors.
     InteractorContainer old = lastInteractors;
@@ -356,7 +356,7 @@ bool UserInteraction::eraseByIndex( const unsigned int index, InteractorContaine
 void UserInteraction::transformMouse( float& x, float& y, unsigned short devX, unsigned short devY )
 {
     int xOrigin, yOrigin, width, height;
-    _window.getWindowRectangle( xOrigin, yOrigin, width, height );
+    _window->getWindowRectangle( xOrigin, yOrigin, width, height );
 
     // TBD hardcoded values.
     float scaleX = (float)width / 640.f;
