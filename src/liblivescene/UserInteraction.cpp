@@ -112,7 +112,7 @@ void UserInteraction::defaultDetection( InteractorContainer& interactors, const 
         }
     }
 
-    if( minVal < undetected )
+    if( minVal < getDefaultDetectionThreshold() )
     {
         Interactor newInteractor;
         newInteractor._name = "single hand";
