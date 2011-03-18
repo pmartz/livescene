@@ -33,9 +33,9 @@ const float nthStdDev(2.8f);
 const float
 	xmin(foreZ.getInternalStatsX().getMean() - foreZ.getInternalStatsX().getStdDev() * nthStdDev),
 	ymin(foreZ.getInternalStatsY().getMean() - foreZ.getInternalStatsY().getStdDev() * nthStdDev), 
-	xmax(foreZ.getInternalStatsZ().getMean() - foreZ.getInternalStatsZ().getStdDev() * nthStdDev), 
-	ymax(foreZ.getInternalStatsX().getMean() + foreZ.getInternalStatsX().getStdDev() * nthStdDev), 
-	zmin(foreZ.getInternalStatsY().getMean() + foreZ.getInternalStatsY().getStdDev() * nthStdDev), 
+	zmin(foreZ.getInternalStatsZ().getMean() - foreZ.getInternalStatsZ().getStdDev() * nthStdDev), 
+	xmax(foreZ.getInternalStatsX().getMean() + foreZ.getInternalStatsX().getStdDev() * nthStdDev), 
+	ymax(foreZ.getInternalStatsY().getMean() + foreZ.getInternalStatsY().getStdDev() * nthStdDev), 
 	zmax(foreZ.getInternalStatsZ().getMean() + foreZ.getInternalStatsZ().getStdDev() * nthStdDev);
 const signed int // std::min and max get angry if the type of the two args is not identical
 	xminIntSigned(xmin),
@@ -265,7 +265,7 @@ void BodyMass::sampleAndDepleteOneCell(livescene::Image &foreZtoDeplete, CoordSt
 				&& currentNeighborY > 0 && currentNeighborY < (signed)foreZtoDeplete.getHeight())
 			{
 				short neighborDepth = depthBuffer[currentNeighborY * foreZtoDeplete.getWidth() + currentNeighborX];
-				if(foreZtoDeplete.isCellValueValid(neighborDepth) && neighborDepth < thresholdZ)
+				if(neighborDepth < thresholdZ && foreZtoDeplete.isCellValueValid(neighborDepth))
 				{
 					addToCoordStack(searchStack, currentNeighborX, currentNeighborY, neighborDepth);
 					// obliterate this cell so it won't be re-processed or re-added to the stack in the future
