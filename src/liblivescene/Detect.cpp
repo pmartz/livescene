@@ -4,6 +4,7 @@
 #include <algorithm> // std::min/max
 #include <limits> // numeric_limits::max
 #include <cassert>
+#include <iostream>
 
 namespace livescene {
 
@@ -123,7 +124,7 @@ const signed int
 	bodySearchMaxYClamped(std::min(bodySearchMaxY, (signed)foreZ.getHeight())),
 	bodyThresholdZClamped(std::max(bodyThresholdZ, 0));
 
-// make an expendible copy of the foreground buffer
+// make an expendable copy of the foreground buffer
 livescene::Image foreZtoDeplete(foreZ);
 
 for(unsigned int handSearch = 0; handSearch < 2; handSearch++)
@@ -135,11 +136,12 @@ for(unsigned int handSearch = 0; handSearch < 2; handSearch++)
 	{
 		// ensure there's at least a little bit of range between resultZ and bodyThresholdZClamped
 		// avoids divide-by-zero and poor weighting later
-		if((signed)resultZ < bodyThresholdZClamped + 2)
+		if((signed)resultZ < bodyThresholdZClamped - 2)
 		{
 			static int count;
 			if(sampleAndDepleteAdjacentThresholded(foreZtoDeplete, bodyThresholdZClamped,
-				resultX, resultY, resultZ, _handCentroid[handSearch][0], _handCentroid[handSearch][1], _handCentroid[handSearch][2]))
+				resultX, resultY, resultZ,
+				_handCentroid[handSearch][0], _handCentroid[handSearch][1], _handCentroid[handSearch][2]))
 			{
 				++HandsDetected;
 			} // if
@@ -200,18 +202,19 @@ bool BodyMass::sampleAndDepleteAdjacentThresholded(livescene::Image &foreZtoDepl
 	unsigned int width(foreZtoDeplete.getWidth()), height(foreZtoDeplete.getHeight());
 	short *depthBuffer = (short *)foreZtoDeplete.getData();
 
-	searchStack.reserve(OSG_LIVESCENEVIEW_DETECT_MAX_STACK + 1); // try pre-reserving
-
 	// seed the sampling/depletion recursive search
-	addToCoordStack(foreZtoDeplete, searchStack, thresholdZ, X, Y);
+	addToCoordStack(searchStack, X, Y, Z);
+	// obliterate this cell so it won't be re-processed or re-added to the stack in the future
+	depthBuffer[Y * foreZtoDeplete.getWidth() + X] = foreZtoDeplete.getNull();
+
 
 	while(!searchStack.empty())
 	{
-		UIntPair currentElement = searchStack[searchStack.size() - 1]; // get next element for processing
+		coordTriplet currentElement = searchStack.entries[searchStack.size() - 1]; // get next element for processing
 		searchStack.pop_back(); // remove it from stack before processing it
 		// process this cell and add any neighbors that need processing
 		sampleAndDepleteOneCell(foreZtoDeplete, searchStack,
-			currentElement.first, currentElement.second, 
+			currentElement.X, currentElement.Y, currentElement.Z, 
 			thresholdZ, Z,
 			runningX, runningY, runningZ, runningWeight);
 	} // while
@@ -231,31 +234,24 @@ bool BodyMass::sampleAndDepleteAdjacentThresholded(livescene::Image &foreZtoDepl
 } // BodyMass::sampleAndDepleteAdjacentThresholded
 
 void BodyMass::sampleAndDepleteOneCell(livescene::Image &foreZtoDeplete, CoordStack &searchStack,
-									   const unsigned int &X, const unsigned int &Y, 
+									   const unsigned int &X, const unsigned int &Y, const short &Z, 
 									   const signed int &thresholdZ, const signed int &maxZ,
 									   float &runningX, float &runningY, float &runningZ, float &runningWeight)
 {
 	short *depthBuffer = (short *)foreZtoDeplete.getData();
-	short originalDepth = depthBuffer[Y * foreZtoDeplete.getWidth() + X];
-
-	if(!(foreZtoDeplete.isCellValueValid(originalDepth) && originalDepth < thresholdZ))
-		return; // TODO <<<>>> shouldn't be needed! this is checked before adding to the stack, right?
 
 	// calculate weight of this sample
 	// samples nearer to the maxZ (the most-extended part of the limb) get more
 	// weight, samples near the threshold plane get much less.
 	// weight ranges from 0...1, and is squared
-	float weight = (1.0f - (float)(originalDepth - maxZ) / (float)(thresholdZ - maxZ));
+	float weight = (1.0f - (float)(Z - maxZ) / (float)(thresholdZ - maxZ));
 	weight *= weight; // give it squared power, not linear
 	// add the sample to the accumulator, scaled by its weight
 	runningX += (X * weight);
 	runningY += (Y * weight);
-	runningZ += (originalDepth * weight);
+	runningZ += (Z * weight);
 	// add the weight to the running total for later normalization
 	runningWeight += weight;
-
-	// obliterate this cell so it won't be re-processed
-	depthBuffer[Y * foreZtoDeplete.getWidth() + X] = foreZtoDeplete.getNull();
 
 	// now, flag any valid neighbors for processing
 	const int spreadMargin(10);
@@ -268,7 +264,14 @@ void BodyMass::sampleAndDepleteOneCell(livescene::Image &foreZtoDeplete, CoordSt
 			if(currentNeighborX > 0 && currentNeighborX < (signed)foreZtoDeplete.getWidth()
 				&& currentNeighborY > 0 && currentNeighborY < (signed)foreZtoDeplete.getHeight())
 			{
-				addToCoordStack(foreZtoDeplete, searchStack, thresholdZ, currentNeighborX, currentNeighborY);
+				short neighborDepth = depthBuffer[currentNeighborY * foreZtoDeplete.getWidth() + currentNeighborX];
+				if(foreZtoDeplete.isCellValueValid(neighborDepth) && neighborDepth < thresholdZ)
+				{
+					addToCoordStack(searchStack, currentNeighborX, currentNeighborY, neighborDepth);
+					// obliterate this cell so it won't be re-processed or re-added to the stack in the future
+					depthBuffer[currentNeighborY * foreZtoDeplete.getWidth() + currentNeighborX] = foreZtoDeplete.getNull();
+
+				} // if
 			} // if
 		} // for
 	} // for
@@ -276,16 +279,13 @@ void BodyMass::sampleAndDepleteOneCell(livescene::Image &foreZtoDeplete, CoordSt
 
 } // BodyMass::sampleAndDepleteOneCell
 
-void BodyMass::addToCoordStack(const livescene::Image &foreZtoDeplete, CoordStack &stack, const signed int &thresholdZ, const unsigned int &X, const unsigned int &Y)
+
+void BodyMass::addToCoordStack(CoordStack &stack, const unsigned int &X, const unsigned int &Y, const short &Z)
 {
-	short *depthBuffer = (short *)foreZtoDeplete.getData();
-	short originalDepth = depthBuffer[Y * foreZtoDeplete.getWidth() + X];
-	if(foreZtoDeplete.isCellValueValid(originalDepth) && originalDepth < thresholdZ)
+
+	if(stack.size() < OSG_LIVESCENEVIEW_DETECT_MAX_STACK)
 	{
-		if(stack.size() < OSG_LIVESCENEVIEW_DETECT_MAX_STACK)
-		{
-			stack.push_back(UIntPair(X, Y));
-		} // if
+		stack.push_back(coordTriplet(X, Y, Z));
 	} // if
 } // BodyMass::addToCoordStack
 

@@ -38,10 +38,33 @@ private:
 }; // Hand
 
 
-/** \brief Pair of coordinates, used in CoordStack */
-typedef std::pair<unsigned int, unsigned int> UIntPair;
+/** \brief Triplet of coordinates, used in CoordStack */
+struct coordTriplet
+{
+public:
+	coordTriplet() : X(0), Y(0), Z(0) {}
+	coordTriplet(unsigned int x, unsigned int y, short z) : X(x), Y(y), Z(z) {}
+
+	unsigned int X, Y;
+	short Z;
+};
+
 /** \brief Stack of coordinate pairs, used internally by sampleAndDepleteAdjacentThresholded(). */
-typedef std::vector<UIntPair> CoordStack;
+//typedef std::vector<coordTriplet> CoordStack;
+struct CoordStack
+{
+public:
+	CoordStack() : entriesUsed(0) {}
+
+	bool empty(void) const {return(entriesUsed == 0);}
+	size_t size(void) const {return(entriesUsed);}
+	void pop_back(void) {entriesUsed--;}
+	void push_back(const coordTriplet &newItem) {entries[entriesUsed++] = newItem;}
+
+	unsigned int entriesUsed;
+	coordTriplet entries[OSG_LIVESCENEVIEW_DETECT_MAX_STACK];
+
+};
 
 
 /** \brief Detect body mass(es)
@@ -75,10 +98,10 @@ private:
 		float &weightedX, float &weightedY, float &weightedZ);
 	// called by sampleAndDepleteAdjacentThresholded to process one cell and its neighbors
 	void BodyMass::sampleAndDepleteOneCell(livescene::Image &foreZtoDeplete, CoordStack &searchStack,
-		const unsigned int &X, const unsigned int &Y,
+		const unsigned int &X, const unsigned int &Y, const short &Z, 
 		const signed int &thresholdZ, const signed int &maxZ,
 		float &runningX, float &runningY, float &runningZ, float &runningWeight);
-	void addToCoordStack(const livescene::Image &foreZtoDeplete, CoordStack &stack, const signed int &thresholdZ, const unsigned int &X, const unsigned int &Y);
+	void addToCoordStack(CoordStack &stack, const unsigned int &X, const unsigned int &Y, const short &Z);
 	bool _bodyPresent;
 	float _centroid[3], // x,y,z
 		_stdDev[3];  // x,y,z
