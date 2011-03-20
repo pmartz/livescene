@@ -180,6 +180,7 @@ int main()
         livescene::Image imageZ( nominalFrameW, nominalFrameH, 2, livescene::DEPTH_10BIT );
         imageCapabilitiesRGB->getImageSync(imageRGB);
         imageCapabilitiesZ->getImageSync(imageZ);
+		imageZ.rewriteZeroToNull(); // we do this explicitly to make null/valid handling quicker, later
 
         // Detect user interaction.
         ui.detectAndSendEvents( imageRGB, imageZ );

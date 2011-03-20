@@ -99,6 +99,7 @@ int main()
     {
         livescene::Image imageZ( nominalFrameW, nominalFrameH, 2, livescene::DEPTH_10BIT );
         imageCapabilitiesZ->getImageSync( imageZ );
+		imageZ.rewriteZeroToNull(); // we do this explicitly to make null/valid handling quicker, later
 
         int validPixels = livescene::transformOSG( vecArray.get(), d2w, imageZ, 1023 );
         pointsDrawArrays->setCount( validPixels );

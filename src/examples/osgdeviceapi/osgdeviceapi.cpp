@@ -147,6 +147,7 @@ int main()
 		if(ImageCapabilitiesZ) // make sure the interface is available
 		{
 			ImageCapabilitiesZ->getImageSync(imageZ);
+			imageZ.rewriteZeroToNull(); // we do this explicitly to make null/valid handling quicker, later
 		} // if
 
 		// the images returned by getImage*() are non-persistent -- the data buffer in them
