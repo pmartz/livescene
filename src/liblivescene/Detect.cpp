@@ -47,14 +47,7 @@ const signed int
 	yminIntClamped(std::max(yminIntSigned, 0)),
 	xmaxIntClamped(std::min(xmaxIntSigned, (signed)foreZ.getWidth() - 1)),
 	ymaxIntClamped(std::min(ymaxIntSigned, (signed)foreZ.getHeight() - 1));
-BoxApproveCallback stdDevBoxApprove(osg::BoundingBox(
-	xmin, // xmin
-	ymin, // ymin
-	zmin, // zmin
-	xmax, // xmax
-	ymax, // ymax
-	zmax // zmax
-	));
+ZApproveCallback stdDevZApprove(zmin, zmax);
 
 // troubleshooting asserts, remove later
 assert(xminIntClamped >= 0);
@@ -69,7 +62,7 @@ assert(ymaxIntClamped < (signed)foreZ.getHeight());
 // find the actual body mass using filtered input
 // this is faster by passing the XY bounding box as a limiter
 foreZ.calcStatsXYZBounded(xminIntClamped, yminIntClamped, xmaxIntClamped, ymaxIntClamped,
-	&statsBodyX, &statsBodyY, &statsBodyZ, &stdDevBoxApprove);
+	&statsBodyX, &statsBodyY, &statsBodyZ, &stdDevZApprove);
 
 if(statsBodyZ.getNumSamples() >= OSG_LIVESCENEVIEW_DETECT_BODY_SAMPLES)
 {

@@ -5,6 +5,7 @@
 #include <malloc.h> // malloc/free
 #include <memory.h> // memcpy
 #include <limits> // numeric_limits::max()
+#include <algorithm> // numeric_limits::max()
 
 namespace livescene {
 
@@ -12,8 +13,8 @@ namespace livescene {
 void ImageStatistics::addSample(double sample)
 {
 	_samples ++;
-	if(sample < _min) _min = sample;
-	if(sample > _max) _max = sample;
+	_min = std::min(_min, sample);
+	_max = std::max(_max, sample);
 
 	// stddev refer to http://www.johndcook.com/standard_deviation.html
     // See Knuth TAOCP vol 2, 3rd edition, page 232
@@ -103,6 +104,39 @@ Image & Image::operator= (const Image & rhs)
 
 return *this;
 } // Image::operator=
+
+
+void Image::rewriteZeroToNull(void)
+{
+	if(!(_format == DEPTH_10BIT || _format == DEPTH_11BIT))
+	{
+		return;
+	} // if
+
+	int width(getWidth()), height(getHeight());
+	short *depthBuffer = (short *)getData();
+
+	unsigned int startLine(1), endLine(height); // initial loop range
+	unsigned int startCol(1), endCol(width); // initial loop range
+
+	unsigned int lineSub(0);
+	// vertically scan 
+	for(unsigned int line = startLine; line < endLine; ++line)
+	{
+		lineSub = line * width;
+		// horizontally scan
+		for(unsigned int column = startCol; column < endCol; ++column)
+		{
+			// rewrite any zero values to NULL for easier single-test identification later
+			if(depthBuffer[lineSub + column] == 0)
+			{
+				depthBuffer[lineSub + column] = _nullValue; // null it out
+			} // if
+		} // for
+	} // for lines
+
+} // Image::rewriteZeroToNull
+
 
 
 unsigned int Image::patchNulls(const unsigned int &numPasses)

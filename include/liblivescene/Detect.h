@@ -111,20 +111,20 @@ private:
 
 
 /** \brief ApproveCallback used to discard samples outside the plausible body region.
-<<<>>> This should be OSG-nonspecific code, so I'd like to eliminate the usage of osg::BoundingBox here.
+calcStatsXYZBounded(0 is already instructed to clamp on XY, so this only needs to clamp on Z.
 */
 
-class BoxApproveCallback : public livescene::ApproveCallback
+class ZApproveCallback : public livescene::ApproveCallback
 {
 public:
-	BoxApproveCallback(osg::BoundingBox bbox) : _bbox(bbox) {}
+	ZApproveCallback(signed int zmin, signed int zmax) : _zmin(zmin), _zmax(zmax) {}
 	bool operator ()(const unsigned int &xCoord, const unsigned int &yCoord, const unsigned short &zCoord)
 	{
-		return(_bbox.contains(osg::Vec3f(xCoord, yCoord, zCoord)));
+		return(zCoord > _zmin && zCoord < _zmax);
 	} // operator ()
 private:
-	osg::BoundingBox _bbox;
-}; // BoxApproveCallback 
+	signed int _zmin, _zmax;
+}; // ZApproveCallback 
 
 
 

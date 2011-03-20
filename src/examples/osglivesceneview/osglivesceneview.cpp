@@ -34,6 +34,7 @@ const int OSG_LIVESCENEVIEW_INITIAL_BACKGROUND_FRAMES(10); // Assume the first n
 // configure these to taste
 bool PolygonsMode(true),
 IsolateBackground(true),
+FilterNoise(false),
 ShowBackground(false),
 textureForeground(false),
 textureBackground(true),
@@ -135,6 +136,7 @@ int main( int argc, char** argv )
 
     osg::notify( osg::ALWAYS ) << "-nopm\tDisables PolygonsMode (default is true)." << std::endl;
     osg::notify( osg::ALWAYS ) << "-noib\tDisables IsolateBackground (default is true)." << std::endl;
+	osg::notify( osg::ALWAYS ) << "-fn\tEnables Filter Noise (default is false)." << std::endl;
     osg::notify( osg::ALWAYS ) << "-sb\tEnables ShowBackground (default is false)." << std::endl;
     osg::notify( osg::ALWAYS ) << "-tf\tEnables textureForeground (default is false)." << std::endl;
     osg::notify( osg::ALWAYS ) << "-notb\tDisables textureBackground (default is true)." << std::endl;
@@ -142,6 +144,7 @@ int main( int argc, char** argv )
     osg::notify( osg::ALWAYS ) << "-depth11bit\tEnables 11bit depth (default is 10bit)." << std::endl;
     PolygonsMode = arguments.find( "-nopm" ) < 0;
     IsolateBackground = arguments.find( "-noib" ) < 0;
+	FilterNoise = arguments.find( "-fn" ) > 0;
     ShowBackground = arguments.find( "-sb" ) > 0;
     textureForeground = arguments.find( "-tf" ) > 0;
     textureBackground = arguments.find( "-notb" ) < 0;
@@ -233,10 +236,10 @@ int main( int argc, char** argv )
 	livescene::Geometry geometryBuilderFore;
 	livescene::Geometry geometryBuilderBack;
 
-    osg::ref_ptr<osg::Group> kinectGroup = new osg::Group;
-    kinectGroup->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
-	kinectGroup->getOrCreateStateSet()->setAttribute( new osg::Point( 3.0f ), osg::StateAttribute::ON );
-	sceneTopTransform->addChild(kinectGroup.get());
+	osg::ref_ptr<osg::MatrixTransform> kinectTransform = new osg::MatrixTransform(d2w);
+    kinectTransform->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
+	kinectTransform->getOrCreateStateSet()->setAttribute( new osg::Point( 3.0f ), osg::StateAttribute::ON );
+	sceneTopTransform->addChild(kinectTransform.get());
 
 	// add HUD
 	buildHUD();
@@ -278,6 +281,7 @@ int main( int argc, char** argv )
 		if(ImageCapabilitiesZ)
 		{
 			goodZ = ImageCapabilitiesZ->getImageSync(imageZ);
+			imageZ.rewriteZeroToNull(); // we do this explicitly to make null/valid handling quicker, later
 		} // if
 
 		// check to see if we got both types of data ok
@@ -317,8 +321,8 @@ int main( int argc, char** argv )
 					} // if
 					noForeground = true; // <<<>>> somehow we could completely avoid drawing the foreground in this case, but we don't yet
 				} // if
-				if(!noForeground)
-				{ // these operations only make sense if we have a forefround
+				if(FilterNoise && !noForeground)
+				{ // these operations only make sense if we have a foreground
 					// filter noise
 					numFiltered = foreZ.filterNoise(2);
 				} // if
@@ -353,16 +357,16 @@ int main( int argc, char** argv )
 				{ // polygon mesh mode
 					if(IsolateBackground)
 					{
-						geometryBuilderFore.buildFaces(foreZ, &imageRGB); // using isolated background
+						geometryBuilderFore.buildFacesSimple(foreZ, &imageRGB); // using isolated background
 						if(ShowBackground)
 						{
-							geometryBuilderBack.buildFaces(background.getBackgroundZ(), &background.getBackgroundRGB()); // build only the BG data
+							geometryBuilderBack.buildFacesSimple(background.getBackgroundZ(), &background.getBackgroundRGB()); // build only the BG data
 							backScene = livescene::buildOSGPolyMeshCopy(geometryBuilderBack, backScene, backColor);
 						} // if
 					} // 
 					else
 					{
-						geometryBuilderFore.buildFaces(imageZ, &imageRGB); // do it without background isolation
+						geometryBuilderFore.buildFacesSimple(imageZ, &imageRGB); // do it without background isolation
 					} // else
 					foreScene = livescene::buildOSGPolyMeshCopy(geometryBuilderFore, foreScene, foreColor);
 				} // else
@@ -371,7 +375,7 @@ int main( int argc, char** argv )
 				// link the new data into the scene graph and setup texturing if this is the first frame
 				if(firstFrame)
 				{
-					kinectGroup->addChild(foreScene);
+					kinectTransform->addChild(foreScene);
 					if(textureForeground)
 					{
 						// setup texturing
@@ -381,7 +385,7 @@ int main( int argc, char** argv )
 
 					if(ShowBackground)
 					{
-						kinectGroup->addChild(backScene);
+						kinectTransform->addChild(backScene);
 						if(textureBackground)
 						{
 							// setup texturing

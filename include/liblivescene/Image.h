@@ -105,7 +105,12 @@ class LIVESCENE_EXPORT Image
 
 		int getNull(void) const {return(_nullValue);}
 		void setNull(int newNull) {_nullValue = newNull;}
-		inline bool isCellValueValid(const short &value) const {return(value != _nullValue && value != 0);}
+		inline bool isCellValueValid(const short &value) const {return(value != _nullValue);}
+
+		// eliminates zero valued samples by replacing them with the Null value
+		// This allows for simpler NULL testing later as we only test against one value
+		// only operates on Z buffer
+		void rewriteZeroToNull(void);
 
 		// eliminates NULL valued samples by interpolating from adjacent non-null data.
 		// multiple passes may be needed, but take more time
