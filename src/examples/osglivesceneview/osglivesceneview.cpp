@@ -66,7 +66,105 @@ std::string fgInfoStr, minDepth, maxDepth;
 
 bool singleCapture = false;
 
-void SaveToFile(osg::Node *node) {
+class PrintSceneGraphVisitor : public osg::NodeVisitor {
+public:
+  PrintSceneGraphVisitor(std::ostream &out) : NodeVisitor(NodeVisitor::TRAVERSE_ALL_CHILDREN), _out(out) {
+    _indent = 0;
+    _step = 2;
+  }
+
+  inline void IndentIn() {
+    _indent += _step;
+  }
+  inline void IndentOut() {
+    _indent -= _step;
+  }
+  inline void WriteIndentation() {
+    for(int i = 0; i < _indent; ++i)
+      _out << " ";
+  }
+
+  virtual void apply(osg::Node &node) {
+    IndentIn();
+    WriteIndentation();
+    _out << node.className() << " \"" << node.getName() << "\"\n";
+
+    // this is the base class so check the existence of a StateSet as well
+    if(node.getStateSet())
+      apply(*node.getStateSet());
+
+    traverse(node);
+    IndentOut();
+  }
+
+  virtual void apply(osg::Geode &geode) {
+    // it is safe to traverse the geode first, a geode does not have children so the the hierarchy
+    // of printing is not messed up
+    apply((osg::Node &)geode);
+
+    IndentIn();
+    for(unsigned int i = 0; i < geode.getNumDrawables(); ++i) {
+      osg::Drawable *drawable = geode.getDrawable(i);
+      if(drawable) {
+        IndentIn();
+        WriteIndentation();
+        _out << drawable->className() << " \"" << drawable->getName() << "\"\n";
+
+        if(drawable->getStateSet()) {
+          apply(*drawable->getStateSet());
+        }
+
+        IndentOut();
+      }
+    }
+    IndentOut();
+  }
+  virtual void apply(osg::Billboard &node)     {apply((osg::Geode &)node);}
+  virtual void apply(osg::LightSource &node)   {apply((osg::Group &)node);}
+  virtual void apply(osg::ClipNode &node)      {apply((osg::Group &)node);}
+
+  virtual void apply(osg::Group &node)         {apply((osg::Node &)node);}
+  virtual void apply(osg::Transform &node)     {apply((osg::Group &)node);}
+  virtual void apply(osg::Projection &node)    {apply((osg::Group &)node);}
+  virtual void apply(osg::Switch &node)        {apply((osg::Group &)node);}
+  virtual void apply(osg::LOD &node)           {apply((osg::Group &)node);}
+
+  virtual void apply(osg::StateSet &stateSet) {
+    IndentIn();
+    WriteIndentation(); _out << stateSet.className() << " \"" << stateSet.getName() << "\"\n";
+
+    for(unsigned int textureUnitCounter = 0; textureUnitCounter < stateSet.getTextureAttributeList().size(); ++textureUnitCounter) {
+      osg::Texture2D *texture2D = dynamic_cast<osg::Texture2D *>(stateSet.getTextureAttribute(textureUnitCounter, osg::StateAttribute::TEXTURE));
+      if(texture2D) {
+        IndentIn();
+        WriteIndentation(); _out << "tex unit " << textureUnitCounter << ": " <<
+            texture2D->className() << " \"" << texture2D->getName() << "\"\n";
+        for(unsigned int imageCounter = 0; imageCounter < texture2D->getNumImages(); ++imageCounter) {
+          osg::Image *img = texture2D->getImage(imageCounter);
+          if(img != NULL) {
+            IndentIn();
+            WriteIndentation(); _out << img->className() << " \"" << img->getName() << "\"\n";
+            IndentOut();
+          }
+        }
+        IndentOut();
+      }
+    }
+
+    IndentOut();
+  }
+
+protected:
+  PrintSceneGraphVisitor &operator = (const PrintSceneGraphVisitor&) {
+    return *this;
+  }
+
+  std::ostream &_out;
+  int _indent;
+  int _step;
+};
+
+void CaptureToFile(osg::Node *node) {
   std::cout << "Saving node " << node->getName() << " to file\n";
   std::stringstream filename;
 #ifdef WIN32
@@ -107,12 +205,14 @@ public:
       case osgGA::GUIEventAdapter::KEYDOWN:
         switch(ea.getKey()) {
           case 'c':
-// TBI            continuousCapture = !continuousCapture;
+            CaptureToFile(kinectTransform.get());
             break;
 
-          case 's':
-            SaveToFile(kinectTransform.get());
-            singleCapture = true;
+          case 'p':
+            {
+            PrintSceneGraphVisitor printSceneGraphVisitor(std::cout);
+            sceneTopTransform->accept(printSceneGraphVisitor);
+            }
             break;
         }
 
@@ -165,6 +265,7 @@ void buildBodyIndicators(void)
 void buildHUD(void)
 {
 	screenElementsGroup = new osg::Group();
+  screenElementsGroup->setName("screenElementsGroup");
 
 	// setup screen-space entities
 	screenTextGeode = new osg::Geode();
@@ -278,6 +379,7 @@ int main( int argc, char** argv )
 	} // if
 
 	sceneTopTransform = new osg::PositionAttitudeTransform;
+  sceneTopTransform->setName("sceneTopTransform");
 	sceneTopTransform->setAttitude(osg::Quat(osg::DegreesToRadians(135.0), osg::Vec3(1.0, 0.0, 0.0)));
 
 
@@ -285,6 +387,7 @@ int main( int argc, char** argv )
     imageFore->setDataVariance( osg::Object::DYNAMIC );
 
     osg::ref_ptr< osg::Texture2D > texFore = new osg::Texture2D;
+    texFore->setName("texBack");
     texFore->setDataVariance( osg::Object::DYNAMIC );
     texFore->setResizeNonPowerOfTwoHint( false );
     texFore->setTextureSize( NominalFrameW, NominalFrameH );
@@ -296,6 +399,7 @@ int main( int argc, char** argv )
     imageBack->setDataVariance( osg::Object::DYNAMIC );
 
     osg::ref_ptr< osg::Texture2D > texBack = new osg::Texture2D;
+    texBack->setName("texBack");
     texBack->setDataVariance( osg::Object::DYNAMIC );
     texBack->setResizeNonPowerOfTwoHint( false );
     texBack->setTextureSize( NominalFrameW, NominalFrameH );
@@ -319,6 +423,7 @@ int main( int argc, char** argv )
 	livescene::Geometry geometryBuilderBack;
 
   kinectTransform = new osg::MatrixTransform(d2w);
+  kinectTransform->setName("kinectTransform");
   kinectTransform->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
   kinectTransform->getOrCreateStateSet()->setAttribute( new osg::Point( 3.0f ), osg::StateAttribute::ON );
   sceneTopTransform->addChild(kinectTransform.get());
