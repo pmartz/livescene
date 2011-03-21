@@ -205,10 +205,12 @@ public:
       case osgGA::GUIEventAdapter::KEYDOWN:
         switch(ea.getKey()) {
           case 'c':
+          case 'C':
             CaptureToFile(kinectTransform.get());
             break;
 
           case 'p':
+          case 'P':
             {
             PrintSceneGraphVisitor printSceneGraphVisitor(std::cout);
             sceneTopTransform->accept(printSceneGraphVisitor);
@@ -384,6 +386,8 @@ int main( int argc, char** argv )
 
 
 	osg::ref_ptr< osg::Image > imageFore = new osg::Image;
+  imageFore->setName("imageFore");
+  imageFore->setFileName("imageFore.png");
     imageFore->setDataVariance( osg::Object::DYNAMIC );
 
     osg::ref_ptr< osg::Texture2D > texFore = new osg::Texture2D;
@@ -396,6 +400,8 @@ int main( int argc, char** argv )
     texFore->setImage( imageFore.get() );
 
 	osg::ref_ptr< osg::Image > imageBack = new osg::Image;
+  imageBack->setName("imageBack");
+  imageBack->setFileName("imageBack.png");
     imageBack->setDataVariance( osg::Object::DYNAMIC );
 
     osg::ref_ptr< osg::Texture2D > texBack = new osg::Texture2D;
