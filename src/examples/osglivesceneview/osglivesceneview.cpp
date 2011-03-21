@@ -7,6 +7,10 @@
 #include <liblivescene/osgGeometry.h>
 #include <liblivescene/Background.h>
 #include <liblivescene/Detect.h>
+#ifdef WIN32
+// RdV to PM/CH: somehow, I cannot put this line as first header file line... try it out and you will get strange errors
+#include <windows.h>  // (at least) for SYSTEMTIME
+#endif
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -47,6 +51,7 @@ unsigned long int frameCount(0);
 
 
 osg::ref_ptr<osg::PositionAttitudeTransform> sceneTopTransform;
+osg::ref_ptr<osg::MatrixTransform> kinectTransform;
 // for HUD and any other screen-space elements
 osg::ref_ptr<osg::Group> screenElementsGroup;
 osg::ref_ptr<osg::Geode> screenTextGeode;
@@ -58,6 +63,82 @@ osg::ref_ptr<osg::PositionAttitudeTransform>bodyBoundsPAT, handZeroPAT, handOneP
 
 // some strings that get formatted together to make the HUD metadata
 std::string fgInfoStr, minDepth, maxDepth;
+
+bool singleCapture = false;
+
+void SaveToFile(osg::Node *node) {
+  std::cout << "Saving node " << node->getName() << " to file\n";
+  std::stringstream filename;
+#ifdef WIN32
+  SYSTEMTIME systemTime;
+
+  GetLocalTime(&systemTime);
+  std::ostringstream dateString;
+  dateString <<
+    std::setfill('0') << std::setw(4) << systemTime.wYear <<
+    "-" << std::setfill('0') << std::setw(2) << systemTime.wMonth <<
+    "-" << std::setfill('0') << std::setw(2) << systemTime.wDay <<
+    "-" << std::setfill('0') << std::setw(2) << systemTime.wHour <<
+    "-" << std::setfill('0') << std::setw(2) << systemTime.wMinute <<
+    "-" << std::setfill('0') << std::setw(2) << systemTime.wSecond <<
+    "-" << std::setfill('0') << std::setw(3) << systemTime.wMilliseconds;
+
+  filename << "saved-" << dateString.str();
+  filename << ".ive";  // resulting file cannot be loaded in osgviewer (debug does not reveal a possible cause)...?!
+//  filename << ".osg";  // resulting file can be loaded, without textures (.osg file does not 
+#else
+  filename << "saved.ive";
+#endif
+  if(osgDB::writeNodeFile(*node, filename.str())) {
+    std::stringstream info;
+    info << "Wrote scene to file " << filename.str() << std::endl;
+    std::cout << info.str();
+  }
+}
+
+class CaptureEventHandler : public osgGA::GUIEventHandler {
+public: 
+  CaptureEventHandler(void) {
+  }
+
+  bool handle(const osgGA::GUIEventAdapter &ea, osgGA::GUIActionAdapter &aa) {
+    bool handled(false);
+    switch(ea.getEventType()) {
+      case osgGA::GUIEventAdapter::KEYDOWN:
+        switch(ea.getKey()) {
+          case 'c':
+// TBI            continuousCapture = !continuousCapture;
+            break;
+
+          case 's':
+            SaveToFile(kinectTransform.get());
+            singleCapture = true;
+            break;
+        }
+
+        handled = true;
+        break;
+
+      case osgGA::GUIEventAdapter::PUSH:
+
+        handled = true;
+        break;
+
+      case osgGA::GUIEventAdapter::DRAG:
+
+        handled = true;
+        break;
+
+      case osgGA::GUIEventAdapter::RELEASE:
+
+        handled = true;
+        break;
+    }
+
+    return handled;
+  }    
+};
+
 
 void buildBodyIndicators(void)
 {
@@ -224,10 +305,11 @@ int main( int argc, char** argv )
 
     osgViewer::Viewer viewer;
     viewer.addEventHandler( new osgViewer::StatsHandler() );
+    viewer.addEventHandler(new CaptureEventHandler());
     viewer.setThreadingModel( osgViewer::ViewerBase::SingleThreaded );
     viewer.setUpViewInWindow( 30, 30, 800, 600 );
-	//viewer.setUpViewOnSingleScreen();
-	viewer.getCamera()->setComputeNearFarMode(osgUtil::CullVisitor::DO_NOT_COMPUTE_NEAR_FAR);
+    //viewer.setUpViewOnSingleScreen();
+    viewer.getCamera()->setComputeNearFarMode(osgUtil::CullVisitor::DO_NOT_COMPUTE_NEAR_FAR);
     viewer.getCamera()->setProjectionMatrix( osg::Matrix::perspective( 35., 4./3., .001, 100. ) );
 
     int backgroundEstablished(0);
@@ -236,10 +318,10 @@ int main( int argc, char** argv )
 	livescene::Geometry geometryBuilderFore;
 	livescene::Geometry geometryBuilderBack;
 
-	osg::ref_ptr<osg::MatrixTransform> kinectTransform = new osg::MatrixTransform(d2w);
-    kinectTransform->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
-	kinectTransform->getOrCreateStateSet()->setAttribute( new osg::Point( 3.0f ), osg::StateAttribute::ON );
-	sceneTopTransform->addChild(kinectTransform.get());
+  kinectTransform = new osg::MatrixTransform(d2w);
+  kinectTransform->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
+  kinectTransform->getOrCreateStateSet()->setAttribute( new osg::Point( 3.0f ), osg::StateAttribute::ON );
+  sceneTopTransform->addChild(kinectTransform.get());
 
 	// add HUD
 	buildHUD();
