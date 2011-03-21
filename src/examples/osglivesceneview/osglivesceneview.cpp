@@ -391,7 +391,7 @@ int main( int argc, char** argv )
     imageFore->setDataVariance( osg::Object::DYNAMIC );
 
     osg::ref_ptr< osg::Texture2D > texFore = new osg::Texture2D;
-    texFore->setName("texBack");
+    texFore->setName("texFore");
     texFore->setDataVariance( osg::Object::DYNAMIC );
     texFore->setResizeNonPowerOfTwoHint( false );
     texFore->setTextureSize( NominalFrameW, NominalFrameH );
