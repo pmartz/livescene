@@ -252,7 +252,7 @@ void buildBodyIndicators(void)
     bodyBounds = new osg::Geode;
     bodyBoundsPAT = new osg::PositionAttitudeTransform;
     bodyBounds->addDrawable(osgwTools::makeWireBox( osg::Vec3(1.0, 1.0, 1.0)));
-    bodyBoundsPAT->addChild(bodyBounds);
+    bodyBoundsPAT->addChild( bodyBounds.get() );
 
     // hands
     handZero = new osg::Geode;
@@ -261,8 +261,8 @@ void buildBodyIndicators(void)
     handOnePAT = new osg::PositionAttitudeTransform;
     handZero->addDrawable(osgwTools::makeWireAltAzSphere( 0.015, 8, 16 )); // could these two be merged?
     handOne->addDrawable(osgwTools::makeWireAltAzSphere( 0.015, 8, 16 )); // could these two be merged?
-    handZeroPAT->addChild(handZero);
-    handOnePAT->addChild(handZero);
+    handZeroPAT->addChild( handZero.get() );
+    handOnePAT->addChild( handZero.get() );
 
 } // buildBodyIndicators
 
@@ -278,9 +278,9 @@ void buildHUD(void)
     screenMatrixTransform = new osg::MatrixTransform();
     screenMatrixTransform->setMatrix(osg::Matrix::identity());
     screenMatrixTransform->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
-    screenElementsGroup->addChild(screenProjection);
-    screenProjection->addChild(screenMatrixTransform);
-    screenMatrixTransform->addChild(screenTextGeode);
+    screenElementsGroup->addChild( screenProjection.get() );
+    screenProjection->addChild( screenMatrixTransform.get() );
+    screenMatrixTransform->addChild( screenTextGeode.get() );
 
     // For this state set, turn blending on (so alpha texture looks right)
     screenTextGeode->getOrCreateStateSet()->setMode(GL_BLEND,osg::StateAttribute::ON);
@@ -303,7 +303,7 @@ void buildHUD(void)
     textEntity->setPosition( osg::Vec3(5.0, 762, 0.0)); // 5,5 from UL
     textEntity->setColor( osg::Vec4(1.0, 1.0, 1.0, 1.0) );
 
-    screenTextGeode->addDrawable( textEntity );
+    screenTextGeode->addDrawable( textEntity.get() );
 
 } // buildHUD
 
@@ -570,22 +570,22 @@ int main( int argc, char** argv )
                 // link the new data into the scene graph and setup texturing if this is the first frame
                 if(firstFrame)
                 {
-                    kinectTransform->addChild(foreScene);
+                    kinectTransform->addChild( foreScene.get() );
                     if(textureForeground)
                     {
                         // setup texturing
                         osg::StateSet* stateSetFore = foreScene->getOrCreateStateSet();
-                        stateSetFore->setTextureAttributeAndModes( 0, texFore );
+                        stateSetFore->setTextureAttributeAndModes( 0, texFore.get() );
                     } // if
 
                     if(ShowBackground)
                     {
-                        kinectTransform->addChild(backScene);
+                        kinectTransform->addChild( backScene.get() );
                         if(textureBackground)
                         {
                             // setup texturing
                             osg::StateSet* stateSetBack = backScene->getOrCreateStateSet();
-                            stateSetBack->setTextureAttributeAndModes( 0, texBack );
+                            stateSetBack->setTextureAttributeAndModes( 0, texBack.get() );
                             imageBack->setImage( NominalFrameW, NominalFrameH, 0, GL_RGB,
                                 GL_RGB, GL_UNSIGNED_BYTE, static_cast<unsigned char *>(background.getBackgroundRGB().getData()), osg::Image::NO_DELETE );
                         } // if

@@ -96,7 +96,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &l
 		// create Geometry object to store all the vertices and primitives.
 		osggeometry = new osg::Geometry();
 		// add the geometry to the geode.
-		geode->addDrawable(osggeometry);
+		geode->addDrawable( osggeometry.get() );
 
 		// create Arrays and elements.
 		vertices = new osg::Vec3Array;
@@ -124,12 +124,12 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPointCloudCopy(const livescene::Geometry &l
 		osggeometry->setUseVertexBufferObjects(true); // makes a significant difference in performance
 
 		// pass the created vertex array to the geometry object.
-		osggeometry->setVertexArray(vertices);
+		osggeometry->setVertexArray( vertices.get() );
 
 		// pass the created texCoord array
-		osggeometry->setTexCoordArray(0, texCoords);
+		osggeometry->setTexCoordArray( 0, texCoords.get() );
 
-		osggeometry->addPrimitiveSet(elements);
+		osggeometry->addPrimitiveSet( elements.get() );
 	} // if
 	else
 	{
@@ -199,7 +199,7 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &lsg
         // create Geometry object to store all the vertices and primitives.
         osggeometry = new osg::Geometry();
 		// add the geometry to the geode.
-        geode->addDrawable(osggeometry);
+        geode->addDrawable( osggeometry.get() );
 
 		// create Arrays and elements.
 		vertices = new osg::Vec3Array;
@@ -227,12 +227,12 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &lsg
 		osggeometry->setUseVertexBufferObjects(true); // makes a significant difference in performance
 
 		// pass the created vertex array to the geometry object.
-		osggeometry->setVertexArray(vertices);
+		osggeometry->setVertexArray( vertices.get() );
 
 		// pass the created texCoord array
-		osggeometry->setTexCoordArray(0, texCoords);
+		osggeometry->setTexCoordArray( 0, texCoords.get() );
 
-		osggeometry->addPrimitiveSet(elements);
+		osggeometry->addPrimitiveSet( elements.get() );
 	} // if
 	else
 	{
