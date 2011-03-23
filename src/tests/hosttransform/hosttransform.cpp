@@ -91,13 +91,13 @@ int main()
     viewer.setUpViewInWindow( 30, 30, 800, 600 );
     viewer.setSceneData( root.get() );
 
-    const int nominalFrameW( 640 ), nominalFrameH( 480 ), nominalFrameD( 1024 );
+    const int nominalFrameW( 640 ), nominalFrameH( 480 ), nominalFrameD( 2047 );
     osg::Matrix d2w = livescene::makeDeviceToWorldMatrixOSG( nominalFrameW, nominalFrameH, nominalFrameD /*, TBD Device device */ );
 
     bool firstFrame( true );
     while( !viewer.done() )
     {
-        livescene::Image imageZ( nominalFrameW, nominalFrameH, 2, livescene::DEPTH_10BIT );
+        livescene::Image imageZ( nominalFrameW, nominalFrameH, 2, livescene::DEPTH_11BIT );
         imageCapabilitiesZ->getImageSync( imageZ );
 		imageZ.rewriteZeroToNull(); // we do this explicitly to make null/valid handling quicker, later
 

@@ -3,6 +3,7 @@
 #include "liblivescene/osgGeometry.h"
 #include <osg/PrimitiveSet>
 //#include <cassert>
+#include <osg/io_utils>
 
 namespace livescene {
 
@@ -291,53 +292,60 @@ LIVESCENE_EXPORT osg::Geode* buildOSGPolyMeshCopy(const livescene::Geometry &lsg
 
 
 
-
-
-
-#if 0
-	// code from libfreenect's glpclview
-
-	// Do the projection from u,v,depth to X,Y,Z directly in an opengl matrix
-	// These numbers come from a combination of the ros kinect_node wiki, and
-	// nicolas burrus' posts.
-    float fx = 594.21f;
-    float fy = 591.04f;
-    float a = -0.0030711f;
-    float b = 3.3309495f;
-    float cx = 339.5f;
-    float cy = 242.7f;
-    GLfloat mat[16] = {
-        1/fx,     0,  0, 0,
-        0,    -1/fy,  0, 0,
-        0,       0,  0, a,
-        -cx/fx, cy/fy, -1, b
-    };
-
-	osg::ref_ptr<osg::MatrixTransform> mt = new osg::MatrixTransform;
-	osg::Matrix magicVertex(mat[ 0], mat[ 1], mat[ 2], mat[ 3],
-		                    mat[ 4], mat[ 5], mat[ 6], mat[ 7],
-							mat[ 8], mat[ 9], mat[10], mat[11],
-							mat[12], mat[13], mat[14], mat[15]);
-	mt->setMatrix(magicVertex);
-	return(mt.release());
-#endif
-
 osg::Matrix makeDeviceToWorldMatrixOSG( const int width, const int height, const int depth /*, TBD Device device */ )
 {
-    // These values are control parameters that will vary from
-    // one device to the next. Currently putting in values that
-    // closely approximate the Kinect, resulting in a net transformOSG
-    // matrix that is pretty close to the "magic matrix" used in
-    // the OpenKinect project.
+#if 0
+    osg::Matrix freenectMatrix;
+    {
+	    // code from libfreenect's glpclview
+
+	    // Do the projection from u,v,depth to X,Y,Z directly in an opengl matrix
+	    // These numbers come from a combination of the ros kinect_node wiki, and
+	    // nicolas burrus' posts.
+        //
+        // The hardcoded magic numbers  come from a computer vision calibration process.
+        // fx,fy correspond to the focal distance and cx,cy to the estimated center
+        // point of the images output by the camera. a and b are coefficients that cause
+        // the results to be in meters. For more info:
+        //   http://nicolas.burrus.name/index.php/Research/KinectCalibration
+
+        float fx = 594.21f;
+        float fy = 591.04f;
+        float a = -0.0030711f;
+        float b = 3.3309495f;
+        float cx = 339.5f;
+        float cy = 242.7f;
+        GLfloat mat[16] = {
+            1/fx,     0,  0, 0,
+            0,    -1/fy,  0, 0,
+            0,       0,  0, a,
+            -cx/fx, cy/fy, -1, b
+        };
+
+        freenectMatrix = osg::Matrix( mat[ 0], mat[ 1], mat[ 2], mat[ 3],
+		                        mat[ 4], mat[ 5], mat[ 6], mat[ 7],
+							    mat[ 8], mat[ 9], mat[10], mat[11],
+							    mat[12], mat[13], mat[14], mat[15] );
+        osg::notify( osg::ALWAYS ) << "freenectMatrix: " << freenectMatrix;
+    }
+#endif
+
+
+    // I derived the near and far values by subtracting the
+    // post-projection transforms out of the freenect matrix,
+    // then decomposing the result with osg::Matrix::getFrustum().
+    // The negative far plane is quite unexpected.
     const bool y0IsUp( true ); // y==0 is at the top in Kinect, so this is true.
-    const float depthValuesPerMeter( 1000.f ); // TBD a Guess
-    const float fovy( 40.f ); // TBD a guess
-    const float near( 0.1f ); // TBD a guess
-    const float far( depth / depthValuesPerMeter );
+    const float fovy( 48.f ); // Empirical.
+    const float near( 0.3f ); // Derived from freenect matrix.
+    const float far( -.338f ); // TBD Derived from freenect matrix.
 
     // Convert from window coords in range (0,0,0)-(width,height,depth)
     //   to biased NDC space in renage (0,0,0)-(2,2,2)
+    // Currently this works for 11bit depth values (depth == 2047).
     osg::Matrix invWindow( osg::Matrix::scale( 2./width, 2./height, 2./depth ) );
+    if( depth != 2047 )
+        osg::notify( osg::WARN ) << "makeDeviceToWorldMatrixOSG: depth values must be 2047. Results are undefined." << std::endl;
 
     osg::Matrix yNegativeScale, invNDC;
     if( y0IsUp )
@@ -357,11 +365,15 @@ osg::Matrix makeDeviceToWorldMatrixOSG( const int width, const int height, const
     }
 
     // Create what we think is the projection matrix:
-    osg::Matrix proj( osg::Matrix::perspective( fovy, (float)width/(float)height, near, far ) );
+    double aspect = (double)width / (double)height;
+    osg::Matrix proj( osg::Matrix::perspective( fovy, aspect, near, far ) );
     // ...and invert it:
     osg::Matrix invProj( osg::Matrix::inverse( proj ) );
 
-    return( invWindow * yNegativeScale * invNDC * invProj );
+    osg::Matrix returnMatrix = invWindow * yNegativeScale * invNDC * invProj;
+    //osg::notify( osg::ALWAYS ) << "Our matrix: " << returnMatrix;
+
+    return( returnMatrix );
 }
 
 
