@@ -327,6 +327,24 @@ osg::Matrix makeDeviceToWorldMatrixOSG( const int width, const int height, const
 							    mat[ 8], mat[ 9], mat[10], mat[11],
 							    mat[12], mat[13], mat[14], mat[15] );
         osg::notify( osg::ALWAYS ) << "freenectMatrix: " << freenectMatrix;
+
+        // Code to decompose their matrix into a simple projection.
+        {
+            osg::Matrix tW = osg::Matrix::scale( width/2., height/2., depth/2. );
+            osg::Matrix tS = osg::Matrix::scale( 1., -1., 1. );
+            osg::Matrix tT = osg::Matrix::translate( 1., -1., 1. );
+            osg::Matrix tP = tW * freenectMatrix;
+            tP = tS * tP;
+            tP = tT * tP;
+            tP = osg::Matrix::inverse( tP );
+            osg::notify( osg::ALWAYS ) << "Depth: " << depth << std::endl;
+            osg::notify( osg::ALWAYS ) << "Their proj " << tP << std::endl;
+            double l, r, b, t, n, f;
+            tP.getFrustum( l, r, b, t, n, f );
+            osg::notify( osg::ALWAYS ) << "  Left: " << l << " Right: " << r << std::endl;
+            osg::notify( osg::ALWAYS ) << "  Bottom: " << b << " Top: " << t << std::endl;
+            osg::notify( osg::ALWAYS ) << "  Near: " << n << " Far: " << f << std::endl;
+        }
     }
 #endif
 
@@ -338,14 +356,14 @@ osg::Matrix makeDeviceToWorldMatrixOSG( const int width, const int height, const
     const bool y0IsUp( true ); // y==0 is at the top in Kinect, so this is true.
     const float fovy( 48.f ); // Empirical.
     const float near( 0.3f ); // Derived from freenect matrix.
-    const float far( -.338f ); // TBD Derived from freenect matrix.
+    const float far( (depth == 1023) ? 5.285f : -.338f ); // TBD Derived from freenect matrix.
 
     // Convert from window coords in range (0,0,0)-(width,height,depth)
     //   to biased NDC space in renage (0,0,0)-(2,2,2)
     // Currently this works for 11bit depth values (depth == 2047).
     osg::Matrix invWindow( osg::Matrix::scale( 2./width, 2./height, 2./depth ) );
-    if( depth != 2047 )
-        osg::notify( osg::WARN ) << "makeDeviceToWorldMatrixOSG: depth values must be 2047. Results are undefined." << std::endl;
+    if( ( depth != 2047 ) || ( depth != 1023 ) )
+        osg::notify( osg::WARN ) << "makeDeviceToWorldMatrixOSG: Depth values must be 1023 or 2047. Results are undefined." << std::endl;
 
     osg::Matrix yNegativeScale, invNDC;
     if( y0IsUp )
