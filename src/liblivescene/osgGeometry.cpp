@@ -356,14 +356,28 @@ osg::Matrix makeDeviceToWorldMatrixOSG( const int width, const int height, const
     const bool y0IsUp( true ); // y==0 is at the top in Kinect, so this is true.
     const float fovy( 48.f ); // Empirical.
     const float near( 0.3f ); // Derived from freenect matrix.
+#if 1
     const float far( (depth == 1023) ? 5.285f : -.338f ); // TBD Derived from freenect matrix.
 
     // Convert from window coords in range (0,0,0)-(width,height,depth)
     //   to biased NDC space in renage (0,0,0)-(2,2,2)
-    // Currently this works for 11bit depth values (depth == 2047).
     osg::Matrix invWindow( osg::Matrix::scale( 2./width, 2./height, 2./depth ) );
+    // Currently this works for 10- or 11-bit depth data. Warn otherwise.
     if( ( depth != 2047 ) || ( depth != 1023 ) )
         osg::notify( osg::WARN ) << "makeDeviceToWorldMatrixOSG: Depth values must be 1023 or 2047. Results are undefined." << std::endl;
+#else
+    // TBD switch to this code in the future. Appears to work for either
+    //   10- or 11-bit depth data.
+    //   TBD remove the depth parameter, don't need it anymore.
+    // OK, this makes a little more sense: Always assume far plane it at
+    // 5.285 meters, and always use a window transform with a device coord
+    // z space of 0-1023.
+    const float far( 5.285f ); // TBD Derived from freenect matrix.
+
+    // Convert from window coords in range (0,0,0)-(width,height,1023)
+    //   to biased NDC space in renage (0,0,0)-(2,2,2)
+    osg::Matrix invWindow( osg::Matrix::scale( 2./width, 2./height, 2./1023. ) );
+#endif
 
     osg::Matrix yNegativeScale, invNDC;
     if( y0IsUp )
