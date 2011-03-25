@@ -339,7 +339,7 @@ int main( int argc, char** argv )
 
 
     osg::Vec4 foreColor(0.0, 0.7, 1.0, 1.0), backColor(1.0, 1.0, 1.0, 1.0);
-    const int nominalFrameD( 1024 ); // <<<>>> these should be made dynamic
+    const int nominalFrameD( depth10bit ? 1023 : 2047 );
     osg::Matrix d2w = livescene::makeDeviceToWorldMatrixOSG( NominalFrameW, NominalFrameH, nominalFrameD /*, TBD Device device */ );
 
 
