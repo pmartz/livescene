@@ -5,6 +5,7 @@
 
 #include "liblivescene/Export.h"
 #include <cmath> // sqrt
+#include <vector>
 
 
 namespace livescene {
@@ -137,6 +138,10 @@ class LIVESCENE_EXPORT Image
 		// approveCallback allows you to provide a callback functor that can custom approve/reject samples
 		bool calcStatsXYZ(livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ, ApproveCallback *approveCallback = 0);
 		bool calcStatsXYZBounded(const unsigned int &Xlow, const unsigned int &Ylow, const unsigned int &Xhigh, const unsigned int &Yhigh, livescene::ImageStatistics *destStatsX, livescene::ImageStatistics *destStatsY, livescene::ImageStatistics *destStatsZ, ApproveCallback *approveCallback = 0);
+
+		// calculate a histogram of Z values
+		bool calcHistogram(const unsigned int &Xlow, const unsigned int &Ylow, const unsigned int &Xhigh, const unsigned int &Yhigh,
+			std::vector<unsigned long> &destHistogram);
 
 		// this calculates full-frame XYZ stats and stores them in the cached internal stats object to avoid unnecessary recalcs
 		bool calcInternalStatsXYZ(ApproveCallback *approveCallback = 0);

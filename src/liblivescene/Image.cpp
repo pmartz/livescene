@@ -6,6 +6,7 @@
 #include <memory.h> // memcpy
 #include <limits> // numeric_limits::max()
 #include <algorithm> // numeric_limits::max()
+#include <cassert>
 
 namespace livescene {
 
@@ -392,6 +393,41 @@ bool Image::calcInternalStatsXYZ(ApproveCallback *approveCallback)
 	} // if
 	return(false);
 } // Image::calcInternalStatsXYZ
+
+
+bool Image::calcHistogram(const unsigned int &Xlow, const unsigned int &Ylow, const unsigned int &Xhigh, const unsigned int &Yhigh,
+						  std::vector<unsigned long> &destHistogram )
+{
+	if(_format == DEPTH_10BIT)
+	{
+		destHistogram.resize(1024, 0); // pre-size 0,1023
+	} // if
+	else if(_format == DEPTH_11BIT)
+	{
+		destHistogram.resize(2048, 0); // pre-size 0,2048
+	} // if
+	else
+	{
+		return(false);
+	} // else
+
+	unsigned int width(getWidth()), height(getHeight());
+	short *depthBuffer = (short *)getData();
+
+	unsigned int lineSub(0);
+	for(unsigned int line = Ylow; line < Yhigh; ++line)
+	{
+		lineSub = line * width;
+		for(unsigned int column = Xlow; column < Xhigh; ++column)
+		{
+			short originalDepth = depthBuffer[lineSub + column];
+			destHistogram[std::max((short)0, originalDepth)]++; // don't subscript below 0
+		} // for
+	} // for lines
+
+	return(true);
+
+} // Image::calcHistogram
 
 
 
