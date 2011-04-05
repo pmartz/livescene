@@ -363,7 +363,7 @@ osg::Matrix makeDeviceToWorldMatrixOSG( const int width, const int height, const
     //   to biased NDC space in renage (0,0,0)-(2,2,2)
     osg::Matrix invWindow( osg::Matrix::scale( 2./width, 2./height, 2./depth ) );
     // Currently this works for 10- or 11-bit depth data. Warn otherwise.
-    if( ( depth != 2047 ) || ( depth != 1023 ) )
+    if( ( depth != 2047 ) && ( depth != 1023 ) )
         osg::notify( osg::WARN ) << "makeDeviceToWorldMatrixOSG: Depth values must be 1023 or 2047. Results are undefined." << std::endl;
 #else
     // TBD switch to this code in the future. Appears to work for either
